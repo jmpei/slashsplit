@@ -1,0 +1,16 @@
+# Local Postgres for development and integration tests. CI uses a service container instead.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: slashsplit
+      POSTGRES_PASSWORD: slashsplit
+      POSTGRES_DB: slashsplit
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  pgdata:
