@@ -11,7 +11,7 @@ CS6983 Project 2 · 双人项目 · 截止 2026-11-12（周四）23:59
 | 作业要求 | 我们怎么满足 |
 |---|---|
 | 全栈（前端 + 后端 + 数据库） | Next.js + API routes + PostgreSQL |
-| 认证（JWT 或 OAuth） | Auth.js：Google OAuth + JWT session |
+| 认证（JWT 或 OAuth） | Better Auth：Google OAuth + JWT session |
 | 3 个以上功能 | 合租房间、按商品记账、结算、AI 扫小票、每月房租 |
 | 实时更新或复杂状态 | 两个都有：按商品分账的编辑状态；Pusher 实时刷新余额 |
 | 公开 API + 文档 | `/api/v1` + 个人 API token + Swagger UI |
@@ -146,7 +146,7 @@ CS6983 Project 2 · 双人项目 · 截止 2026-11-12（周四）23:59
 | 框架 | Next.js（App Router）+ TypeScript |
 | 样式 | Tailwind |
 | 数据库 | PostgreSQL（Neon）+ Prisma |
-| 认证 | Auth.js：Google OAuth + JWT session；测试环境另开账号密码登录 |
+| 认证 | Better Auth：Google OAuth + JWT session（cookie cache 用 JWT）；测试环境另开账号密码登录 |
 | 校验 | zod |
 | API 文档 | 从 zod 生成 OpenAPI，`/api/docs` 用 Swagger UI 展示 |
 | 文件存储 | Vercel Blob |

@@ -27,7 +27,7 @@ and the fewest transfers to settle up. Requirements, rules and sprint plan: `doc
 | UI | React, Tailwind CSS | 19.3 / 4.x |
 | Database | PostgreSQL, Prisma ORM with `@prisma/adapter-pg` | 17 / 7.10.1 |
 | Validation | zod | 4.x |
-| Auth | Auth.js: Google OAuth + JWT session; email/password only outside production | (login issue) |
+| Auth | Better Auth: Google OAuth + JWT cookie-cache session; email/password only outside production | 1.7.18 |
 | AI | Gemini API with `responseSchema` (structured output) | (scan issue) |
 | Real-time | Pusher Channels | (real-time issue) |
 | Unit + integration tests | Vitest | 5.0.5 |
