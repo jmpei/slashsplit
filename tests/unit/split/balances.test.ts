@@ -158,6 +158,10 @@ describe("planSettlement", () => {
     }
   });
 
+  test("a household with no members has nothing to settle", () => {
+    expect(planSettlement([])).toEqual([]);
+  });
+
   test("rejects balances that don't add up to 0", () => {
     expect(() =>
       planSettlement([
