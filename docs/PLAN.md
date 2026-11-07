@@ -21,7 +21,7 @@ CS6983 Project 2 · 双人项目 · 截止 2026-11-12（周四）23:59
 | 多阶段 CI、PR 预览、安全扫描、自动部署、环境管理 | GitHub Actions + Vercel + Neon 分支（见 §10） |
 | AGENTS.md | 两人共同维护，每个 sprint 更新（见 §11） |
 | 2 个以上 sprint，每个 5 个以上 issue | Sprint 1 有 8 个，Sprint 2 有 8 个（见 §12） |
-| 每人每 sprint 3 次以上 standup | 每天一条，每人每 sprint 4 条 |
+| 每人每 sprint 3 次以上 standup | 每天一条，每人每 sprint 3 条 |
 | 每人 5 次以上 PR review | 一个 issue 一个 PR，每人 review 对方约 8 个 |
 
 ## 3. 功能
@@ -302,10 +302,10 @@ main 分支保护：必须所有检查通过，并且搭档 approve 一次，才
 
 | 时间 | 阶段 |
 |---|---|
-| 11/1（日） | 两人一起做 sprint 计划；开好 GitHub、Vercel、Neon、Google OAuth、Pusher 账号 |
-| 11/2（一）– 11/6（五） | Sprint 1 |
-| 11/7（六）– 11/10（二） | Sprint 2 |
-| 11/11（三）– 11/12（四） | 文档、demo 视频、个人反思 |
+| 11/6（五） | 两人一起做 sprint 计划；开好 GitHub、Vercel、Neon、Google OAuth、Pusher 账号 |
+| 11/7（六）– 11/9（一） | Sprint 1 |
+| 11/10（二）– 11/12（四） | Sprint 2（先砍 #12 每月房租） |
+| 11/12（四） | 文档、demo 视频、个人反思 |
 
 估算单位是故事点（1、2、3、5）。甲 = Jiaming，乙 = 搭档。
 
