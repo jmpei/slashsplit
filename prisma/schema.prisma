@@ -23,6 +23,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  memberships   Membership[]
 }
 
 model Session {
@@ -68,4 +69,31 @@ model Verification {
   updatedAt  DateTime @updatedAt
 
   @@index([identifier])
+}
+
+// A shared household (#4). Members join with the invite code.
+model Household {
+  id          String       @id @default(cuid())
+  name        String
+  inviteCode  String       @unique
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+}
+
+enum Role {
+  OWNER
+  MEMBER
+}
+
+// joinedAt orders members; split rounding hands leftover cents out in this order (PLAN §5.1).
+model Membership {
+  userId      String
+  householdId String
+  role        Role      @default(MEMBER)
+  joinedAt    DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@id([userId, householdId])
+  @@index([householdId])
 }
