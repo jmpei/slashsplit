@@ -41,5 +41,6 @@ test("a wrong invite code shows an error", async ({ browser }, info) => {
   const page = await signUp(browser, "Lee", `${info.project.name}-${Date.now()}`);
   await page.getByLabel("Invite code").fill("ZZZZZZZZ");
   await page.getByRole("button", { name: "Join household" }).click();
-  await expect(page.getByRole("status")).toHaveText("No household has that invite code.");
+  const joinForm = page.getByRole("form", { name: "Join a household" });
+  await expect(joinForm.getByRole("status")).toHaveText("No household has that invite code.");
 });
