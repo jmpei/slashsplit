@@ -11,10 +11,11 @@ Rules for AI agents and contributors: [`AGENTS.md`](AGENTS.md).
 Planned for Sprint 1 and 2 (see `docs/PLAN.md` §3). This list grows as features merge.
 
 - `GET /api/health` — liveness check for deploys and E2E.
+- Sign in with Google; outside production, a test email/password login for E2E.
 
 ## Tech stack
 
-Next.js 16 (App Router, TypeScript) · Tailwind CSS 4 · PostgreSQL + Prisma 7 · Auth.js · zod ·
+Next.js 16 (App Router, TypeScript) · Tailwind CSS 4 · PostgreSQL + Prisma 7 · Better Auth · zod ·
 Gemini (receipt scanning) · Pusher (real-time) · Vitest · Playwright · GitHub Actions · Vercel · Neon
 
 ## Local setup
@@ -54,7 +55,7 @@ All names are in [`.env.example`](.env.example).
 |---|---|
 | `DATABASE_URL` | App database |
 | `TEST_DATABASE_URL` | Integration tests (separate database) |
-| `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | Login |
+| `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Login |
 | `GEMINI_API_KEY` | Receipt scanning |
 | `PUSHER_APP_ID`, `PUSHER_SECRET`, `NEXT_PUBLIC_PUSHER_KEY`, `NEXT_PUBLIC_PUSHER_CLUSTER` | Real-time updates |
 | `BLOB_READ_WRITE_TOKEN` | Receipt image storage |
