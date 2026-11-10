@@ -1,4 +1,4 @@
-// Prisma CLI config: schema path, migrations path, and DATABASE_URL from .env.
+// Prisma CLI config: schema path, migrations path, and the database URL from .env.
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
@@ -8,6 +8,7 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Migrations need a direct connection; the app uses the pooled DATABASE_URL.
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });
