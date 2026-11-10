@@ -24,6 +24,10 @@ model User {
   sessions      Session[]
   accounts      Account[]
   memberships   Membership[]
+  paidExpenses  Expense[]         @relation("ExpensePayer")
+  itemParts     ItemParticipant[]
+  expenseWeights ExpenseWeight[]
+  expenseShares ExpenseShare[]
 }
 
 model Session {
@@ -78,6 +82,7 @@ model Household {
   inviteCode  String       @unique
   createdAt   DateTime     @default(now())
   memberships Membership[]
+  expenses    Expense[]
 }
 
 enum Role {
@@ -96,4 +101,90 @@ model Membership {
 
   @@id([userId, householdId])
   @@index([householdId])
+}
+
+enum SplitMode {
+  EQUAL
+  RATIO
+  ITEMIZED
+}
+
+enum ExpenseStatus {
+  DRAFT
+  CONFIRMED
+}
+
+// An expense in a household (#6). All money fields are integer cents; date is YYYY-MM-DD.
+model Expense {
+  id          String          @id @default(cuid())
+  householdId String
+  payerId     String
+  merchant    String
+  date        String
+  totalCents  Int
+  splitMode   SplitMode       @default(ITEMIZED)
+  status      ExpenseStatus   @default(CONFIRMED)
+  receiptUrl  String?
+  createdAt   DateTime        @default(now())
+  household   Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  payer       User            @relation("ExpensePayer", fields: [payerId], references: [id], onDelete: Cascade)
+  items       ExpenseItem[]
+  taxes       ExpenseTax[]
+  weights     ExpenseWeight[]
+  shares      ExpenseShare[]
+
+  @@index([householdId])
+}
+
+model ExpenseItem {
+  id           String            @id @default(cuid())
+  expenseId    String
+  name         String
+  priceCents   Int
+  taxCodes     String[]
+  sortOrder    Int               @default(0)
+  expense      Expense           @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  participants ItemParticipant[]
+
+  @@index([expenseId])
+}
+
+model ItemParticipant {
+  itemId String
+  userId String
+  item   ExpenseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, userId])
+}
+
+model ExpenseTax {
+  id          String  @id @default(cuid())
+  expenseId   String
+  code        String
+  amountCents Int
+  sortOrder   Int     @default(0)
+  expense     Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@index([expenseId])
+}
+
+model ExpenseWeight {
+  expenseId String
+  userId    String
+  weight    Int
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([expenseId, userId])
+}
+
+model ExpenseShare {
+  expenseId   String
+  userId      String
+  amountCents Int
+  expense     Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([expenseId, userId])
 }

@@ -15,6 +15,7 @@ Planned for Sprint 1 and 2 (see `docs/PLAN.md` §3). This list grows as features
 - `GET /api/health` — liveness check for deploys and E2E.
 - Sign in with Google; outside production, a test email/password login for E2E.
 - Households: create one, invite roommates with an 8-character code, see members in join order.
+- Expenses: record itemized bills (untick anyone who didn’t share an item), equal splits, or ratio splits, with proportional tax allocation and largest-remainder rounding.
 
 ## Tech stack
 
