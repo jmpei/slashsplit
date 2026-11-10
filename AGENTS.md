@@ -1,287 +1,303 @@
 # AGENTS.md — SlashSplit
 
-> Rules for any AI coding agent (Antigravity, Claude Code, Cursor, Codex) working in this repo.
-> Read this file first, then the GitHub Issue you were given, then `docs/PLAN.md`.
-> Every rule has a **Why** so you can judge cases the rule does not cover.
-> This is the only rules file for this repo. If a personal or global instruction file you also loaded
-> disagrees with it, this file wins inside this repo. **Why:** in HW3 a home-folder `CLAUDE.md`
-> silently leaked into sessions.
-> Both partners maintain this file. Version: v2 (2026-11-09); v1 was carried over from the Sofa Tomato
-> v2 rules (HW3). Changes are listed in §9 Changelog.
+> Structured according to Anthropic's [Claude Prompting Best Practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices) using semantic XML sections (`<role>`, `<context>`, `<design_system>`, `<tdd_workflow>`, `<examples>`, `<output_contract>`), explicit constraints paired with **Why** motivations, and few-shot examples.
+
+<role>
+You are an expert full-stack TypeScript engineer working on **SlashSplit** (`jmpei/slashsplit`), a shared-expense web application for roommates built by **Theodore Pei** and **Marcus Ramos** for CS6983 Project 2.
+
+Read files in this exact order before writing any code:
+1. `AGENTS.md` (this file — binding engineering and workflow contract)
+2. `DESIGN.md` (binding UI/UX design system adapted from `VoltAgent/awesome-design-md`)
+3. The assigned GitHub Issue (`gh issue view <n>`)
+4. `docs/PLAN.md` (product specification, split math in §5, receipt flow in §6, API in §8.2, sprint plans in `docs/sprints/sprint1.md` and `docs/sprints/sprint2.md`)
+
+**Precedence rule:** This is the sole instruction file for this repository. If a global or home-directory `CLAUDE.md` / `AGENTS.md` conflicts with this file, this file wins inside this repository.
+- **Why:** In prior assignments, global instruction files silently leaked conflicting stack and commit rules into agent sessions.
+</role>
 
 ---
 
-## 1. Project context
+<context>
+## 1. Project Context & Architecture
 
-### 1.1 What this is
+### 1.1 Product Summary
+SlashSplit lets roommates snap or enter a shared receipt, slash (exclude) roommates from individual items they did not share, allocate multi-rate taxes proportionally, view net balances, and settle debts with the minimum number of transfers.
 
-SlashSplit is a shared-expense app for roommates. You snap a receipt, AI turns it into an item list,
-each item can be "slashed" for people who did not share it, and the app always shows who owes whom
-and the fewest transfers to settle up. Requirements, rules and sprint plan: `docs/PLAN.md`.
-
-### 1.2 Tech stack (pin these versions)
+### 1.2 Pinned Technology Stack
 
 | Layer | Choice | Version |
 |---|---|---|
-| Framework | Next.js App Router, TypeScript (strict) | 16.4.3 |
-| UI | React, Tailwind CSS | 19.3 / 4.x |
+| Framework | Next.js App Router, TypeScript (`strict: true`) | 16.4.3 |
+| UI & Design System | React, Tailwind CSS, `DESIGN.md` (Vercel-inspired system) | 19.3 / 4.x |
 | Database | PostgreSQL, Prisma ORM with `@prisma/adapter-pg` | 17 / 7.10.1 |
-| Validation | zod | 4.x |
-| Auth | Better Auth: Google OAuth + JWT cookie-cache session; email/password only outside production | 1.7.18 |
-| AI | Gemini API with `responseSchema` (structured output) | (scan issue) |
-| Real-time | Pusher Channels | (real-time issue) |
-| Unit + integration tests | Vitest | 5.0.5 |
-| E2E | Playwright | 1.64.1 |
-| Hosting | Vercel (preview per PR, production on `main`), Neon Postgres | — |
+| Validation & OpenAPI | `zod` + `@asteasolutions/zod-to-openapi` | 4.x / 8.5.0 |
+| Authentication | Better Auth: Google OAuth + JWT cookie-cache session; email/password strictly outside production | 1.7.18 |
+| AI Receipt Extraction | Google Gemini API (`responseMimeType: "application/json"`) validated by `zod` | Issue `#9` |
+| Real-Time Sync | Pusher Channels (with polling fallback when keys are unset) | Issue `#11` |
+| Unit & Integration Tests | Vitest (unit: pure functions; integration: real PostgreSQL) | 5.0.5 |
+| End-to-End Tests | Playwright (Desktop Chrome `1280px` + Mobile Pixel 7 `360px`) | 1.64.1 |
+| Hosting | Vercel (Preview per PR, Production on `main`) + Neon PostgreSQL | — |
 
-**Next.js 16.4 is newer than most training data.** Before using a Next.js API, read the matching guide
-in `node_modules/next/dist/docs/`. `cacheComponents` is on in `next.config.ts`.
-**Prisma 7:** import the client from `@/generated/prisma/client` (generated, git-ignored, rebuilt by
-`postinstall`). Never import from `@prisma/client`.
+- **Next.js 16.4 notice:** Next.js 16.4 is newer than most pre-training cutoffs. Before using unfamiliar Next.js APIs, consult `node_modules/next/dist/docs/`. Note that `npm run typecheck` runs `next typegen && tsc --noEmit`.
+- **Prisma 7 notice:** Always import from `@/generated/prisma/client` (generated by `postinstall` / `prisma generate`). Never import from `@prisma/client`.
 
-### 1.3 Architecture
+### 1.3 Directory Layout & Layer Boundaries
 
-```
+```text
+DESIGN.md              UI design system tokens, typography, and component rules (REQUIRED for all UI work).
 src/
-  app/                 Pages and layouts.
-  app/api/v1/          Public REST API. Route handlers only parse, authorize, and call src/server/.
-  lib/split/           Split rules: pure functions, no Prisma, no Next, no I/O.
-  lib/receipt/         Gemini call + parsing the reply into the receipt schema.
-  lib/db.ts            The one Prisma client.
-  server/              Services: every database read and write.
-  generated/prisma/    Prisma client (generated; never edit, never commit).
-prisma/schema.prisma   Data model. Migrations in prisma/migrations/.
-tests/unit/            Vitest, no database.
-tests/integration/     Vitest against real Postgres (TEST_DATABASE_URL).
-tests/fixtures/        Receipt JSON samples that stand in for Gemini.
-e2e/                   Playwright specs.
-docs/                  PLAN.md, sprints/, architecture, API, AI usage log.
+  app/                 Next.js App Router pages, layouts, and client components (styled per DESIGN.md).
+  app/api/v1/          Public REST API. Route handlers ONLY parse (zod), authorize, and call src/server/.
+  app/api/openapi.json Serves the OpenAPI 3.1 document generated from src/lib/openapi.ts.
+  app/api/docs/        Interactive Swagger UI page.
+  lib/split/           Pure split & settlement math (allocate.ts, split-expense.ts, balances.ts). Zero I/O.
+  lib/receipt/         Gemini receipt extractor + zod receipt validation.
+  lib/schemas/         Shared zod request/response schemas (households, expenses, settlements, tokens).
+  lib/openapi.ts       OpenAPI 3.1 registry and document generator.
+  lib/db.ts            Singleton Prisma client.
+  server/              Database services and authorization helpers (api.ts, auth.ts, households.ts, expenses.ts, balances.ts).
+  generated/prisma/    Generated Prisma client (git-ignored; never edit manually).
+prisma/schema.prisma   PostgreSQL schema and migrations in prisma/migrations/.
+tests/unit/            Fast Vitest unit tests (no database, no network).
+tests/integration/     Vitest integration tests against real PostgreSQL (TEST_DATABASE_URL).
+tests/fixtures/        Deterministic receipt JSON fixtures for testing without live Gemini calls.
+e2e/                   Playwright browser specs.
+docs/                  PLAN.md, sprints/ (sprint1.md, sprint2.md, planning, standups, retros), architecture, API.
 ```
 
-**Key patterns**
+### 1.4 Core Engineering Invariants (Every Rule Has a Why)
 
-1. **Money is integer cents.** Every amount field and variable ends in `Cents` and is an integer.
-   Never use floats, `toFixed`, or `parseFloat` on money. Format only at render time.
-   **Why:** float sums drift; shares must add up to the receipt total exactly.
-2. **Every split result adds up to its total.** Any function that divides money returns shares whose
-   sum equals the input, using the largest-remainder rule in `docs/PLAN.md` §5.1. Each such function has
-   a test asserting the sum.
-3. **Split logic lives in `src/lib/split/` as pure functions.** Pass in time, ids, and member order as
-   parameters. **Why:** this is where TDD earns its keep; tests run in milliseconds.
-4. **Only `src/server/` touches Prisma.** Route handlers and pages call services; services return plain
-   objects, never Prisma model instances with extra methods.
-5. **Every `/households/{id}/…` route checks membership first** and answers 403 to non-members, with an
-   integration test proving it. **Why:** one missing check leaks a household's money data.
-6. **AI output is untrusted input.** Gemini's reply is parsed with the zod receipt schema; anything that
-   fails becomes an editable draft with errors, never a saved expense. Only a user's "Confirm" saves.
-7. **Validate every request body and query with zod** at the route boundary; the same schemas generate
-   the OpenAPI document.
-
-### 1.4 Data model
-
-See `docs/PLAN.md` §8.1 for the target tables. Change `prisma/schema.prisma` only inside the issue that
-needs the table, with a migration (`npm run db:migrate -- --name <what>`), and say so in the PR.
-
-### 1.5 Naming conventions
-
-| Thing | Convention | Example |
-|---|---|---|
-| Files | kebab-case | `split-items.ts`, `expense-form.tsx` |
-| React components | PascalCase; a whole page ends in `Page` | `ExpenseForm`, `BalancesPage` |
-| Functions | camelCase verb phrase | `splitItems`, `allocateTax`, `planSettlement` |
-| Money | `<thing>Cents`, integer | `priceCents`, `totalCents` |
-| Calendar day | `YYYY-MM-DD` string | `"2026-11-01"` |
-| API paths | `/api/v1/<plural-noun>` | `/api/v1/households/{id}/expenses` |
-| Env vars | UPPER_SNAKE_CASE; browser-visible ones start `NEXT_PUBLIC_` | `GEMINI_API_KEY` |
-| Tests | `test("<what the user sees or the rule>")` in plain words | `"a slashed member pays nothing for that item"` |
-
-### 1.6 Coding standards
-
-- Each file opens with a 1–3 line comment saying what it is and why. Comment the *why*, not the *what*.
-- TypeScript strict; no `any`, no `@ts-ignore` without a comment naming the issue.
-- Two-space indent, double quotes, semicolons (match existing code; `npm run lint` is the judge).
-- No `console.log` left in `src/`.
-- **A calendar day is the person's local day.** Build `YYYY-MM-DD` in one helper from `getFullYear()`,
-  `getMonth()`, `getDate()`. Never `toISOString().slice(0, 10)`. **Why:** that is the UTC day; in HW3
-  all four test runs shipped this bug (an evening in Vancouver becomes tomorrow).
-- User-facing copy: short, plain sentences, sentence case, curly apostrophe (`You don’t owe anyone.`).
+1. **Money is integer cents (`*Cents`).** Every monetary column, payload field, and variable ends in `Cents` and stores a safe integer (`priceCents`, `totalCents`, `owedCents`, `netCents`). Never use floating-point math, `parseFloat`, or `toFixed` on money; convert only at input/render boundaries (`parseDollarsToCents` / `formatCents`).
+   - **Why:** Floating-point arithmetic drifts (`0.1 + 0.2 !== 0.3`); divided shares must sum to the receipt total to the exact cent.
+2. **Every split function preserves the exact total.** All division of money uses `allocate(totalCents, weights)` in `src/lib/split/allocate.ts` implementing the **Largest Remainder Method** (`docs/PLAN.md` §5.1) with deterministic tie-breaking by ascending `userId`. Every split test asserts `sum(shares) === totalCents`.
+   - **Why:** Non-deterministic remainder assignment causes flaky tests and penny discrepancies across roommates.
+3. **Pure domain math stays in `src/lib/split/`.** Functions in `src/lib/split/` take plain data structures and never import Prisma, Next.js, or `process.env`.
+   - **Why:** Pure functions execute in `< 5 ms` in unit tests and can be verified exhaustively via TDD.
+4. **Only `src/server/` queries Prisma.** Route handlers (`src/app/api/v1/**/route.ts`) and Server Actions parse inputs with `zod`, verify authentication and household membership (`authorizeMember`), and delegate to `src/server/`.
+   - **Why:** Keeping Prisma calls inside `src/server/` prevents data-access leakage into UI components and ensures uniform authorization checks.
+5. **Every `/api/v1/households/{id}/...` route checks membership first.** Call `authorizeMember(request, id)` before reading or mutating any household data; return `401` when unauthenticated and `403` when the caller is not a member of that household, backed by an integration test.
+   - **Why:** A single missing membership check exposes private roommate expenses and balances across households.
+6. **AI output is untrusted input.** Parse Gemini responses through `zod`; store scanned receipts strictly with `status: "DRAFT"`. Never include `DRAFT` expenses in net balances or settlement plans until a household member explicitly confirms the draft (`status: "CONFIRMED"` after verifying `items + taxes === totalCents`).
+   - **Why:** Vision LLMs occasionally misread faded thermal paper totals; human confirmation prevents corrupting household balances.
+7. **Every `/api/v1` route must be registered in `src/lib/openapi.ts`.**
+   - **Why:** `tests/unit/openapi.test.ts` automatically scans `src/app/api/v1/**/route.ts` and fails CI if any path or HTTP method is missing from the OpenAPI 3.1 specification.
+8. **Calendar dates use local calendar day (`YYYY-MM-DD`).** Never construct a local date with `new Date().toISOString().slice(0, 10)`.
+   - **Why:** `toISOString()` converts to UTC first, turning evening expenses in North America into tomorrow's date.
+</context>
 
 ---
 
-## 2. Requirements
+<design_system>
+## 2. UI/UX Design System Contract (`DESIGN.md`)
 
-- `docs/PLAN.md`: features (§3), user stories with acceptance criteria (§4), split rules (§5),
-  receipt flow (§6), API (§8.2), sprint plan (§12).
-- GitHub Issues: each issue body holds the **acceptance-criteria checklist**. The checklist is the
-  contract; if the plan and the issue disagree, the issue wins and you say so.
-- **Start every task with `gh issue view <n>`.** If you cannot read it, keep going from the plan and the
-  prompt, and list the acceptance criteria you *assumed* at the top of your final report.
+**Mandatory rule:** Before creating or modifying any page, layout, or component in `src/app/**/*.tsx`, read [`DESIGN.md`](./DESIGN.md) in the repository root. All UI must strictly conform to `DESIGN.md` (adapted from [`VoltAgent/awesome-design-md`](https://github.com/VoltAgent/awesome-design-md)'s Vercel design system).
+- **Why:** Without a single plain-text design token contract, different AI sessions generate inconsistent colors, button radii, shadows, and number formatting across Sprint 1 and Sprint 2.
+
+### Key `DESIGN.md` Rules to Enforce on Every UI Component:
+1. **Surface & Hairline Hierarchy:**
+   - Page canvas uses `{colors.canvas-soft}` (`bg-zinc-50 dark:bg-zinc-950`).
+   - Cards and panels use `{colors.canvas}` (`bg-white dark:bg-zinc-900`) with `1px` `{colors.hairline}` borders (`border border-zinc-200 dark:border-zinc-800`) and `rounded-xl p-6 shadow-xs`. Never use heavy drop-shadows (`shadow-xl`, `shadow-2xl`).
+2. **Typography (`Geist` & `Geist Mono`):**
+   - Headings use `font-semibold tracking-tight` (weight `600` ceiling, sentence case, negative tracking).
+   - Invite codes, Bearer tokens (`ss_...`), tax codes, and technical badges use `font-mono text-xs`.
+3. **Tabular Numerals for Money (`tabular-nums`):**
+   - Every element rendering a dollar amount (`$21.00`), net balance (`+$20.00` / `-$15.00`), tax amount, or item price MUST include `tabular-nums` so figures align vertically.
+4. **Primary CTA & Semantic Status Colors:**
+   - Primary action buttons use `{colors.primary}` (`bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900`).
+   - Positive net balances (`+$20.00`) use `{colors.success}` (`text-emerald-700 dark:text-emerald-400`).
+   - Negative net balances (`-$15.00`), form errors, and the **Receipt Draft Total Mismatch Banner** (`role="status"`, `aria-live="polite"`) use `{colors.error}` (`border-red-200 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400`).
+5. **Responsive & Accessible (`360 px` Mobile → `1280 px` Desktop, WCAG 2.2 AA):**
+   - Zero horizontal scroll (`overflow-x`) at `360 px` viewport width.
+   - Use native `<button>`, `<input>`, `<select>`, and `<a>` elements with explicit labels and minimum `40–44 px` touch targets on mobile.
+</design_system>
 
 ---
 
-## 3. TDD workflow (red → green → refactor)
+<reasoning_protocol>
+## 3. Step-by-Step Reasoning Protocol Before Coding
 
-Graders check the git history for failing tests committed **before** the implementation. Follow this
-order on every feature and bug fix:
+Before writing or editing files for any task, work through these steps explicitly:
+1. **Inspect the Specification:** Read the GitHub Issue (`gh issue view <n>`), `docs/PLAN.md`, and `DESIGN.md` (if UI is touched). Extract every acceptance-criteria checkbox.
+2. **Design the Red Tests First:** Map each acceptance criterion to a concrete unit test (`tests/unit/`), integration test (`tests/integration/`), or Playwright E2E test (`e2e/`). If a new API route is needed, create only a minimal `501 Not Implemented` stub in the Red step so test imports compile and fail on status/assertion (`expected 501 to be 201`).
+3. **Verify the Failure Reason:** Run the new test suite and confirm it fails on the expected assertion before writing any implementation code.
+4. **Implement the Minimal Green Solution:** Write the service in `src/server/`, the route handler in `src/app/api/v1/`, the OpenAPI registration in `src/lib/openapi.ts`, and the UI in `src/app/` following `DESIGN.md`.
+5. **Verify Full Quality Gates:** Run `npm run lint`, `npm run typecheck`, `npm run test:unit`, `npm run test:integration`, and `npm run test:e2e`.
+</reasoning_protocol>
 
-| Step | Commit | Contains | CI on the branch |
+---
+
+<tdd_workflow>
+## 4. Strict TDD Workflow (`Red → Green → Refactor`)
+
+Course grading inspects the Git commit log to verify that failing tests were committed **before** the implementation on every feature and bug-fix branch.
+
+| Step | Commit Prefix | Allowed Contents | Expected Test Result |
 |---|---|---|---|
-| Red | `test(<scope>): <rule> (#n)` | Only new or changed tests, turned from the issue's acceptance criteria | Fails — expected |
-| Green | `feat(<scope>): <summary> (#n)` or `fix(...)` | The smallest code that passes | Passes |
-| Refactor | `refactor(<scope>): <summary> (#n)` | Cleanup, no behaviour change | Passes |
+| **1. Red** | `test(<scope>): <rule> (#<n>)` | **ONLY** new/updated test files, test fixtures, and 3-line `501` route stubs | **Fails** on assertion (record the failure line in the commit body) |
+| **2. Green** | `feat(<scope>): <summary> (#<n>)` or `fix(...)` | Implementation code, Prisma migration, OpenAPI entry, UI components | **Passes** all unit, integration, and E2E tests |
+| **3. Refactor** | `refactor(<scope>): <summary> (#<n>)` | Optional code cleanup with zero behavior change | **Passes** |
 
-- Run the new test and see it fail **for the right reason** (assertion, not a typo or import error)
-  before writing the implementation. Paste the failing line into the red commit body.
-- Never delete or weaken an existing test to make a change pass.
-- When an AI writes the tests, a human reads them before the red commit: the tests are the spec.
-
----
-
-## 4. Scrum and Git workflow
-
-### 4.1 Board
-
-GitHub Project with **Backlog → Sprint Todo → In Progress → In Review → Done**.
-Milestones: **Sprint 1** (2026-11-07 → 11-09), **Sprint 2** (11-10 → 11-12). Deadline 2026-11-12.
-Work only on an issue in Sprint Todo or In Progress; move it to In Progress when you start.
-
-### 4.2 Branches
-
-`<type>/<issue-number>-<short-kebab-description>` from an up-to-date `main`. One issue, one branch.
-
-| Type | Use for | Example |
-|---|---|---|
-| `feature/` | a user-visible capability | `feature/5-itemized-split` |
-| `fix/` | a bug | `fix/21-rounding-remainder` |
-| `chore/` | tooling, CI, refactors | `chore/2-ci-pipeline` |
-| `docs/` | documentation only | `docs/30-architecture` |
-
-### 4.3 Commits — Conventional Commits with the issue number
-
-```
-<type>(<scope>): <imperative summary, ≤ 72 chars> (#<issue>)
-
-<optional body: why, not what>
-```
-
-- `type`: `test`, `feat`, `fix`, `refactor`, `docs`, `chore`, `ci`, `style`.
-- `scope`: `split`, `receipt`, `expenses`, `households`, `balances`, `auth`, `api`, `ui`, `db`, `ci`, `docs`.
-- One logical change per commit. Tests and implementation are **separate** commits (§3).
-
-### 4.4 Pull requests
-
-- Title = the main commit summary. Body starts with `Closes #<issue>`.
-- Copy the issue's acceptance-criteria checklist into the PR; tick each item with its test name.
-- Paste the test summary lines (unit, integration, e2e).
-- UI changes: attach screenshots at 360 px and 1280 px, light and dark.
-- **The partner reviews and approves before merge** (each partner needs 5+ reviews). Review comments
-  must say something concrete: a question, a risk, or what you checked.
-- **Merge with "Create a merge commit"** (not squash). **Why:** squash collapses the red and green
-  commits into one and erases the TDD evidence. Delete the branch after merge.
-
-### 4.5 Referencing issues in code
-
-- Reference an issue in code only where the reason is not obvious: `// #12: Costco prints tax per line.`
-- No `TODO` without an issue number: `// TODO(#14): …`.
+- **Never combine tests and implementation in the same commit.**
+- **Never delete or weaken an existing test** to make a new change pass.
+</tdd_workflow>
 
 ---
 
-## 5. Do's and don'ts
+<git_and_pr_workflow>
+## 5. Scrum, Git & Pull Request Hygiene
 
-### 5.1 Patterns
+### 5.1 Milestones & Ownership
+- **Sprint 1 (`2026-11-07` → `2026-11-10`, Milestone `Sprint 1`):** Issues `#1`–`#8`, implemented by **Theodore Pei**, reviewed and approved by **Marcus Ramos** (`docs/sprints/sprint1.md`).
+- **Sprint 2 (`2026-11-10` → `2026-11-13`, Milestone `Sprint 2`):** Issues `#9`, `#10`, `#11`, `#13`, `#14`, `#15`, `#16`, implemented by **Marcus Ramos**, reviewed and approved by **Theodore Pei** (`docs/sprints/sprint2.md`).
+- **Sprint 3 (Milestone `Sprint 3`):** Project wrap-up, 10-minute demo video, individual reflections, and final release checks (**Theodore Pei** + **Marcus Ramos**).
 
-| Do | Don't |
-|---|---|
-| Integer cents everywhere; format at render | Floats, `toFixed`, or strings for amounts |
-| Pure split functions with injected inputs | Split math inside a component or route handler |
-| Route → zod parse → auth + membership → service | Prisma calls in a route handler or page |
-| Gemini reply → zod → draft → user confirms | Saving AI output directly |
-| Use fixtures in `tests/fixtures/receipts/` in tests | Calling the real Gemini API from any test or CI job |
-| Tailwind utilities and theme tokens in `globals.css` | Hard-coded hex colors in components |
-| Mobile first: works at 360 px | Layouts that only work on desktop |
+### 5.2 Branch & Commit Naming
+- **Branch format:** `<type>/<issue-number>-<short-kebab-description>` (`feature/6-itemized-expenses`, `feature/9-receipt-scan`, `chore/8-openapi-docs`, `docs/sprint-1-records`).
+- **Commit format:** `<type>(<scope>): <imperative summary, ≤ 72 chars> (#<issue>)`
+  - Allowed `type`: `test`, `feat`, `fix`, `refactor`, `docs`, `chore`, `ci`, `style`.
+  - Allowed `scope`: `split`, `receipt`, `expenses`, `households`, `balances`, `auth`, `api`, `ui`, `db`, `ci`, `docs`.
 
-### 5.2 Dependencies
-
-- Ask before adding any dependency; say why a built-in or an existing one won't do.
-- Prefer platform built-ins: `Intl.NumberFormat` for money display, `crypto.randomUUID`, `fetch`.
-
-### 5.3 Security
-
-- Secrets live only in `.env` (git-ignored), Vercel, and GitHub Secrets. `.env.example` lists names
-  with empty values. Never print a secret in logs, tests, or PRs.
-- Never use `dangerouslySetInnerHTML` or `eval`.
-- Authorize on the server for every request; never trust a user id or household id from the client
-  without checking membership.
-- Uploads: accept only jpg, png, heic, webp up to 10 MB; check the type on the server.
-- Public API tokens are stored hashed; show the plain token once at creation.
-- The email/password login exists only when `NODE_ENV !== "production"`; a test asserts it is off in
-  production.
-
-### 5.4 Accessibility (WCAG 2.2 AA)
-
-- Real `<button>`, `<a>`, `<input>`, `<select>` with visible or `sr-only` labels.
-- Touch targets ≥ 44 px; results and errors announced in an `aria-live="polite"` region.
-- Contrast ≥ 4.5:1 in light and dark; animation respects `prefers-reduced-motion`.
+### 5.3 Pull Request & Merge Rules
+- Start the PR body with `Closes #<issue>` so merging automatically closes the issue and updates the GitHub Milestone progress bar.
+- Include the issue's acceptance-criteria checklist with the matching test names ticked, plus unit/integration/E2E pass counts.
+- **Cross-partner review:** The partner who did not author the PR must post a substantive technical review (`gh pr review <pr> --approve --body "..."`) before merge (minimum 5+ reviews per partner).
+- **Merge strategy — NEVER Squash Merge:** Always merge with **Create a merge commit** (`gh pr merge <pr> --merge`).
+  - **Why:** Squash merging collapses the Red (`test(...)`) and Green (`feat(...)`) commits into a single commit, destroying the Git-history TDD evidence.
+</git_and_pr_workflow>
 
 ---
 
-## 6. Definition of Done
+<security_and_quality_guardrails>
+## 6. Security & Dependency Guardrails
 
-- [ ] Every acceptance-criteria checkbox in the issue is met and has a test.
-- [ ] Red commit came before the green commit (§3).
-- [ ] `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:e2e` pass (paste counts).
-- [ ] New API routes appear in the OpenAPI document with request and response schemas.
-- [ ] Works at 360 and 1280 px, light and dark.
-- [ ] Branch, commits and PR follow §4; partner approved.
-- [ ] A user-visible feature adds one line to README "Features".
+- **Secrets:** Store secrets exclusively in `.env` (git-ignored), Vercel Environment Variables, and GitHub Actions Secrets. Never commit real keys. Note that `.gitleaks.toml` allowlists dummy test strings inside `tests/` and `e2e/` only.
+- **Gemini API in Tests:** Never call the live Gemini API in unit, integration, or CI tests. Always inject deterministic JSON fixtures from `tests/fixtures/receipts/`.
+- **Public API Tokens (`#13`):** Prefix generated tokens with `ss_`, store only their SHA-256 `tokenHash` in PostgreSQL, and return the plaintext token only once (`201 Created`).
+- **Uploads (`#9`):** Accept only `image/jpeg`, `image/png`, `image/heic`, and `image/webp` up to `10 MB`; validate MIME type and byte length on the server.
+- **Zero Unapproved Dependencies:** Do not install new npm packages without explicit justification; use Node/Web built-ins (`fetch`, `node:crypto`, `Intl.NumberFormat`).
+</security_and_quality_guardrails>
 
-**Final report template** (end every task with this, filled in):
+---
 
+<examples>
+## 7. Few-Shot Examples (Follow These Patterns)
+
+<example name="tdd-commit-pair">
+<description>How to structure Red and Green commits on a feature branch</description>
+<good>
+Commit 1 (Red):
+  test(expenses): itemized, equal and ratio expenses API and E2E (#6)
+
+  Failing test output before implementation:
+  FAIL tests/integration/expenses.test.ts > recording and managing expenses > itemized split stores items
+  AssertionError: expected 501 to be 201
+
+Commit 2 (Green):
+  feat(expenses): itemized, equal and ratio expenses API and UI (#6)
+
+  Adds Expense/ExpenseItem/ExpenseTax/ExpenseShare tables, /api/v1/households/[id]/expenses routes,
+  OpenAPI specs, and household expense form styled per DESIGN.md.
+</good>
+<bad>
+Commit 1 (Combined — VIOLATES §4):
+  feat(expenses): add expense API, UI, and integration tests (#6)
+</bad>
+</example>
+
+<example name="route-handler-boundary">
+<description>Thin route handler validating with zod, checking household membership, and delegating to src/server/</description>
+<good>
+```ts
+export async function POST(request: Request, { params }: Params) {
+  const { id } = await params;
+  const authResult = await authorizeMember(request, id);
+  if (!authResult.ok) return authResult.response;
+
+  const parsed = createExpenseSchema.safeParse(await readJson(request));
+  if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Invalid expense.");
+
+  const result = await createExpense(id, parsed.data);
+  if (!result.ok) return badRequest(result.error);
+  return NextResponse.json(result.expense, { status: 201 });
+}
 ```
+</good>
+</example>
+
+<example name="design-md-ui-component">
+<description>Rendering a roommate balance row and primary action button per DESIGN.md</description>
+<good>
+```tsx
+<section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+  <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Balances</h2>
+  <div className="mt-4 flex items-center justify-between text-sm">
+    <span className="font-medium text-zinc-900 dark:text-zinc-100">{member.name}</span>
+    <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+      +{formatCents(netCents)}
+    </span>
+  </div>
+  <button
+    type="button"
+    className="mt-4 rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
+  >
+    Mark paid
+  </button>
+</section>
+```
+</good>
+</example>
+</examples>
+
+---
+
+<commands>
+## 8. Commands Reference
+
+```bash
+npm install                     # installs packages and runs prisma generate
+npx playwright install chromium # first-time browser install
+npm run db:up                   # starts Postgres 17 in Docker (slashsplit + slashsplit_test)
+npm run db:deploy               # applies migrations to dev DB
+DATABASE_URL="postgresql://slashsplit:slashsplit@localhost:5432/slashsplit_test?schema=public" npm run db:deploy
+npm run dev                     # starts local server on http://localhost:3000
+npm run lint && npm run typecheck
+npm run test:unit               # Vitest unit tests (no DB)
+npm run test:integration        # Vitest integration tests (real Postgres)
+npm test                        # unit + integration
+npm run test:e2e                # Playwright E2E suite (port 3100)
+```
+</commands>
+
+---
+
+<output_contract>
+## 9. Definition of Done & Final Report Contract
+
+Before declaring any task complete, verify every item below:
+- [ ] Every acceptance-criteria checkbox in the GitHub Issue is implemented and covered by an automated test.
+- [ ] Red commit (`test(...)`) was committed before the Green commit (`feat(...)` / `fix(...)`).
+- [ ] All UI changes follow [`DESIGN.md`](./DESIGN.md) (`Geist` / `Geist Mono`, `#171717` primary CTA, `1px` hairline borders, `tabular-nums` on all money amounts, responsive at `360 px` and `1280 px` in light and dark modes).
+- [ ] New `/api/v1` routes are registered in `src/lib/openapi.ts` (`tests/unit/openapi.test.ts` passes).
+- [ ] `npm run lint`, `npm run typecheck`, `npm test`, and `npm run test:e2e` pass with 0 errors.
+
+End every task completion report with this exact filled-in block:
+
+```text
 Issue: #<n> — read with gh | could not read; assumed AC: …
-Branch: <name>   Red commit: <first line>   Green commit: <first line>
+Branch: <name>   Red commit: <sha + subject>   Green commit: <sha + subject>
 Tests: unit <pass/fail>, integration <pass/fail>, e2e <pass/fail>
 AC:  - [x] <criterion> — <test name>
      - [ ] <criterion> — not done, because …
 Not done / open questions: …
 ```
+</output_contract>
 
 ---
 
-## 7. Commands
+## 10. Changelog
 
-```bash
-npm install                     # also runs prisma generate
-npx playwright install chromium # first time only
-npm run db:up                   # local Postgres in Docker (dev + test databases)
-npm run db:migrate              # apply / create migrations locally
-npm run dev                     # http://localhost:3000
-npm run lint && npm run typecheck
-npm run test:unit               # fast, no database
-npm run test:integration        # needs db:up
-npm test                        # unit + integration
-npm run test:e2e                # Playwright; starts dev server on port 3100
-```
-
----
-
-## 8. When unsure
-
-Name the gap and ask instead of guessing. Do not change the split rules (`docs/PLAN.md` §5), the data
-model, or the access rules without saying so in the PR.
-
----
-
-## 9. Changelog
-
-- **v1 (2026-11-01):** written for SlashSplit from the Sofa Tomato v2 rules (HW3). Kept: rule-file
-  precedence, `gh issue view` first, local calendar day, no weakened tests, final report template.
-  Changed: tests and code now go in **separate** commits and PRs merge with a merge commit (TDD evidence);
-  stack moved to Next.js + Prisma + TypeScript; added money-in-cents, membership-check, and
-  AI-output-is-untrusted rules.
-- **v2 (2026-11-09):** end of Sprint 1. Auth is Better Auth, not Auth.js: Auth.js v5 is still beta
-  and its Prisma adapter does not support Prisma 7. Sprint dates follow `docs/PLAN.md` §12
-  (Sprint 1 11-07 → 11-09, Sprint 2 11-10 → 11-12).
+- **v1 (2026-11-01):** Initial SlashSplit rules adapted from Sofa Tomato v2 (HW3). Added separate Red/Green commit rule, merge-commit preservation, integer-cent money invariant, household membership checks, and untrusted AI draft rule.
+- **v2 (2026-11-10):** End of Sprint 1 (**Theodore Pei**). Updated auth stack to Better Auth (`1.7.18`) for Prisma 7 compatibility; added `DESIGN.md` (adapted from `VoltAgent/awesome-design-md` Vercel system) as the binding UI specification; restructured `AGENTS.md` using Anthropic's Claude Prompting Best Practices (semantic XML tags `<role>`, `<context>`, `<design_system>`, `<reasoning_protocol>`, `<tdd_workflow>`, `<examples>`, `<output_contract>`); updated Sprint 1 (`11-07 → 11-10`), Sprint 2 (`11-10 → 11-13`), and Sprint 3 milestones.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
