@@ -1,5 +1,7 @@
 # SlashSplit
 
+[![CI](https://github.com/jmpei/slashsplit/actions/workflows/ci.yml/badge.svg)](https://github.com/jmpei/slashsplit/actions/workflows/ci.yml)
+
 Split shared bills with roommates, item by item. Snap a receipt, slash the items someone didn’t share,
 and see who owes whom and the fewest transfers to settle up.
 
