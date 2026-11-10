@@ -1,10 +1,12 @@
 "use server";
-// Server actions for recording and deleting expenses inside a household (#6).
+// Server actions for recording expenses (#6) and marking settlement transfers paid (#7).
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { expenseBody, type ExpenseInput } from "@/lib/schemas/expenses";
+import { recordSettlementBody, type RecordSettlementInput } from "@/lib/schemas/settlements";
 import { auth } from "@/server/auth";
+import { recordSettlement } from "@/server/balances";
 import { createExpense, deleteExpense, ValidationError } from "@/server/expenses";
 import { isMember, NotFoundError } from "@/server/households";
 
@@ -41,4 +43,25 @@ export async function removeExpenseAction(householdId: string, expenseId: string
     if (!(error instanceof NotFoundError)) throw error;
   }
   revalidatePath(`/households/${householdId}`);
+}
+
+export async function markTransferPaidAction(
+  householdId: string,
+  payload: RecordSettlementInput,
+): Promise<{ error?: string }> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/sign-in");
+  if (!(await isMember(session.user.id, householdId))) {
+    return { error: "You’re not a member of this household." };
+  }
+  const parsed = recordSettlementBody.safeParse(payload);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  try {
+    await recordSettlement(householdId, parsed.data);
+  } catch (error) {
+    if (error instanceof ValidationError) return { error: error.message };
+    throw error;
+  }
+  revalidatePath(`/households/${householdId}`);
+  return {};
 }

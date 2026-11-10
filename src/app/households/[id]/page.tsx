@@ -1,13 +1,16 @@
-// One household (#4, #6): invite code, members in join order, expense entry form, and recorded
-// expenses with each member's computed share. Non-members get a 404 page.
+// One household (#4, #6, #7): invite code, members in join order, net balances, greedy settlement
+// plan, expense entry form, and recorded expenses. Non-members get a 404 page.
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { formatCents } from "@/lib/schemas/expenses";
+import { planSettlement } from "@/lib/split/balances";
 import { auth } from "@/server/auth";
+import { getHouseholdBalances } from "@/server/balances";
 import { listExpenses } from "@/server/expenses";
 import { getHousehold, isMember, listMembers } from "@/server/households";
+import { BalancesPanel } from "./balances-panel";
 import { ExpenseForm } from "./expense-form";
 
 const roleLabel = { OWNER: "Owner", MEMBER: "Member" } as const;
@@ -17,13 +20,15 @@ async function HouseholdContent({ params }: { params: Promise<{ id: string }> })
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
   if (!(await isMember(session.user.id, id))) notFound();
-  const [household, members, expenses] = await Promise.all([
+  const [household, members, expenses, balances] = await Promise.all([
     getHousehold(id),
     listMembers(id),
     listExpenses(id),
+    getHouseholdBalances(id),
   ]);
   if (!household) notFound();
 
+  const transfers = planSettlement(balances);
   const nameById = new Map(members.map((m) => [m.userId, m.name]));
 
   return (
@@ -47,6 +52,13 @@ async function HouseholdContent({ params }: { params: Promise<{ id: string }> })
           ))}
         </ul>
       </section>
+
+      <BalancesPanel
+        householdId={id}
+        members={members}
+        balances={balances}
+        transfers={transfers}
+      />
 
       <ExpenseForm householdId={id} currentUserId={session.user.id} members={members} />
 
