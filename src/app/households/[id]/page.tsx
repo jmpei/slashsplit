@@ -1,10 +1,14 @@
-// One household (#4): its invite code and members in join order. Non-members get a 404 page.
+// One household (#4, #6): invite code, members in join order, expense entry form, and recorded
+// expenses with each member's computed share. Non-members get a 404 page.
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
+import { formatCents } from "@/lib/schemas/expenses";
 import { auth } from "@/server/auth";
+import { listExpenses } from "@/server/expenses";
 import { getHousehold, isMember, listMembers } from "@/server/households";
+import { ExpenseForm } from "./expense-form";
 
 const roleLabel = { OWNER: "Owner", MEMBER: "Member" } as const;
 
@@ -13,8 +17,14 @@ async function HouseholdContent({ params }: { params: Promise<{ id: string }> })
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
   if (!(await isMember(session.user.id, id))) notFound();
-  const [household, members] = await Promise.all([getHousehold(id), listMembers(id)]);
+  const [household, members, expenses] = await Promise.all([
+    getHousehold(id),
+    listMembers(id),
+    listExpenses(id),
+  ]);
   if (!household) notFound();
+
+  const nameById = new Map(members.map((m) => [m.userId, m.name]));
 
   return (
     <>
@@ -36,6 +46,34 @@ async function HouseholdContent({ params }: { params: Promise<{ id: string }> })
             </li>
           ))}
         </ul>
+      </section>
+
+      <ExpenseForm householdId={id} currentUserId={session.user.id} members={members} />
+
+      <section className="flex flex-col gap-2">
+        <h2 className="font-medium">Expenses</h2>
+        {expenses.length === 0 ? (
+          <p className="text-sm text-foreground/70">No expenses recorded yet.</p>
+        ) : (
+          <ul aria-label="Expenses" className="flex flex-col divide-y divide-foreground/10">
+            {expenses.map((expense) => (
+              <li key={expense.id} className="flex flex-col gap-1 py-3">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="font-medium">{expense.merchant}</span>
+                  <span className="font-mono">{formatCents(expense.totalCents)}</span>
+                </div>
+                <p className="text-xs text-foreground/70">
+                  Paid by {nameById.get(expense.payerId) ?? "Member"} on {expense.date}
+                </p>
+                <p className="text-sm text-foreground/80">
+                  {expense.shares
+                    .map((s) => `${nameById.get(s.userId) ?? s.userId}: ${formatCents(s.amountCents)}`)
+                    .join(" · ")}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </>
   );
