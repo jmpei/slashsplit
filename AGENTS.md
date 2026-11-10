@@ -6,8 +6,8 @@
 > This is the only rules file for this repo. If a personal or global instruction file you also loaded
 > disagrees with it, this file wins inside this repo. **Why:** in HW3 a home-folder `CLAUDE.md`
 > silently leaked into sessions.
-> Both partners maintain this file. Version: v1 (2026-11-01), carried over from the Sofa Tomato v2
-> rules (HW3). Changes are listed in §9 Changelog.
+> Both partners maintain this file. Version: v2 (2026-11-09); v1 was carried over from the Sofa Tomato
+> v2 rules (HW3). Changes are listed in §9 Changelog.
 
 ---
 
@@ -142,7 +142,7 @@ order on every feature and bug fix:
 ### 4.1 Board
 
 GitHub Project with **Backlog → Sprint Todo → In Progress → In Review → Done**.
-Milestones: **Sprint 1** (2026-11-02 → 11-06), **Sprint 2** (11-07 → 11-10). Deadline 2026-11-12.
+Milestones: **Sprint 1** (2026-11-07 → 11-09), **Sprint 2** (11-10 → 11-12). Deadline 2026-11-12.
 Work only on an issue in Sprint Todo or In Progress; move it to In Progress when you start.
 
 ### 4.2 Branches
@@ -279,6 +279,9 @@ model, or the access rules without saying so in the PR.
   Changed: tests and code now go in **separate** commits and PRs merge with a merge commit (TDD evidence);
   stack moved to Next.js + Prisma + TypeScript; added money-in-cents, membership-check, and
   AI-output-is-untrusted rules.
+- **v2 (2026-11-09):** end of Sprint 1. Auth is Better Auth, not Auth.js: Auth.js v5 is still beta
+  and its Prisma adapter does not support Prisma 7. Sprint dates follow `docs/PLAN.md` §12
+  (Sprint 1 11-07 → 11-09, Sprint 2 11-10 → 11-12).
 
 <!-- BEGIN:nextjs-agent-rules -->
 
