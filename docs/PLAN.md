@@ -1,119 +1,115 @@
-# SlashSplit（暂定名）项目方案
+# SlashSplit — Project Plan
 
-CS6983 Project 2 · 双人项目 · 截止 2026-11-12（周四）23:59
+CS6983 Project 2 · Pair Project (**Theodore Pei** & **Marcus Ramos**) · Due **2026-11-12 (Thu) 23:59**
 
-## 1. 一句话
+## 1. One-Line Summary
 
-室友合租记账网站：拍小票，AI 识别成商品清单；每个商品可以 slash 掉不吃的人；随时显示谁欠谁，给出转账方案。
+A shared-expense web app for roommates: snap a receipt, let AI turn it into an item list, "slash" anyone who didn’t share a specific item, and always see who owes whom with the fewest transfers to settle up.
 
-## 2. 作业要求对照
+## 2. Course Requirements Mapping
 
-| 作业要求 | 我们怎么满足 |
+| Assignment Requirement | How SlashSplit Satisfies It |
 |---|---|
-| 全栈（前端 + 后端 + 数据库） | Next.js + API routes + PostgreSQL |
-| 认证（JWT 或 OAuth） | Better Auth：Google OAuth + JWT session |
-| 3 个以上功能 | 合租房间、按商品记账、结算、AI 扫小票、每月房租 |
-| 实时更新或复杂状态 | 两个都有：按商品分账的编辑状态；Pusher 实时刷新余额 |
-| 公开 API + 文档 | `/api/v1` + 个人 API token + Swagger UI |
-| 专业 UI/UX | Tailwind，适配手机（在超市当场拍小票） |
-| TDD | 失败测试单独 commit，之后再写实现（见 §9） |
-| 单元 + 集成 + E2E | Vitest + Vitest（连真实 Postgres）+ Playwright |
-| 多阶段 CI、PR 预览、安全扫描、自动部署、环境管理 | GitHub Actions + Vercel + Neon 分支（见 §10） |
-| AGENTS.md | 两人共同维护，每个 sprint 更新（见 §11） |
-| 2 个以上 sprint，每个 5 个以上 issue | Sprint 1 有 8 个，Sprint 2 有 8 个（见 §12） |
-| 每人每 sprint 3 次以上 standup | 每天一条，每人每 sprint 3 条 |
-| 每人 5 次以上 PR review | 一个 issue 一个 PR，每人 review 对方约 8 个 |
+| Complete full-stack (frontend + backend + DB) | Next.js App Router + `/api/v1` route handlers + PostgreSQL (Neon) |
+| Authentication (JWT or OAuth) | Better Auth: Google OAuth + JWT cookie-cache session |
+| 3+ distinct features | Households & invite codes, itemized/equal/ratio expense splitting, balances & greedy settlement, AI receipt scanning |
+| Real-time updates OR complex state | Both: interactive per-item participant slash editor + Pusher real-time balance refresh |
+| Public API with documentation | `/api/v1` REST endpoints + personal Bearer API tokens + OpenAPI 3.1 (`/api/openapi.json`) & Swagger UI (`/api/docs`) |
+| Professional UI/UX | Tailwind CSS 4, mobile-first (360 px for snapping receipts in-store) & desktop (1280 px), light & dark mode |
+| TDD (red → green → refactor) | Failing tests committed separately (`test(...)`) before implementation (`feat(...)`), merged with merge commits (see §9) |
+| Unit + Integration + E2E tests | Vitest (unit) + Vitest against real PostgreSQL (integration) + Playwright (E2E) |
+| Multi-stage CI, PR previews, security scans, auto-deploy | GitHub Actions + CodeQL + npm audit + gitleaks + Dependabot + Vercel + Neon (see §10) |
+| Shared `AGENTS.md` | Jointly maintained by **Theodore Pei** and **Marcus Ramos**, updated every sprint (see §11) |
+| 2+ sprints, 5+ issues per sprint | Sprint 1 has 8 issues; Sprint 2 has 7 active issues (see §12, [`docs/sprints/sprint1.md`](sprints/sprint1.md), [`docs/sprints/sprint2.md`](sprints/sprint2.md)) |
+| 3+ standups per partner per sprint | Daily standup log per partner in `docs/sprints/` |
+| 5+ PR reviews per partner | One issue per branch/PR: Marcus reviews Theodore’s Sprint 1 PRs; Theodore reviews Marcus’s Sprint 2 PRs |
 
-## 3. 功能
+## 3. Features
 
-| # | 功能 | Sprint |
+| # | Feature | Sprint |
 |---|---|---|
-| F1 | 合租房间：创建房间，用邀请码拉室友 | 1 |
-| F2 | 按商品记账：录入商品，每个商品勾选谁分；也可以一键平分或整单按比例分 | 1 |
-| F3 | 余额 + 结算：随时显示谁欠谁，给出转账方案，记录"已转账" | 1 |
-| F4 | AI 扫小票：拍照，识别成草稿，校验，确认后保存 | 2 |
-| F5 | 实时更新：有人记账，其他人页面上的余额马上变 | 2 |
-| F6 | 每月房租：每月 1 号自动生成房租账单 | 2（时间不够就砍） |
-| F7 | 公开 API：个人 token + Swagger 文档 | 1 骨架，2 完成 |
+| F1 | Households: create a household and invite roommates with an 8-character invite code | Sprint 1 |
+| F2 | Expense splitting: record itemized expenses (tick/slash who shared each item), one-click equal split, or ratio split | Sprint 1 |
+| F3 | Balances & settlement: show each member’s net balance, compute a greedy settlement plan, and mark transfers paid | Sprint 1 |
+| F4 | AI receipt scan: upload a receipt photo, parse into an editable draft with validation, and confirm to save | Sprint 2 |
+| F5 | Real-time updates: when someone records an expense or settlement, roommates’ balance views update automatically | Sprint 2 |
+| F6 | Monthly recurring bills: scheduled monthly bill generation | Sprint 2 (cut first if time-constrained) |
+| F7 | Public API: personal Bearer tokens + OpenAPI 3.1 & Swagger UI | Sprint 1 skeleton (#8), Sprint 2 tokens (#13) |
 
-## 4. 用户故事与验收标准
+## 4. User Stories & Acceptance Criteria
 
-**US1 合租房间**
-作为室友，我想建一个房间并邀请别人，这样我们能一起记账。
-- 创建房间后，我是房主，并且拿到一个邀请码
-- 别人用邀请码加入后，出现在成员列表里
-- 不是成员的人访问房间的任何数据，一律返回 403
+**US1 — Shared Households**
+As a roommate, I want to create a household and invite others so we can track shared bills together.
+- Creating a household makes me its `OWNER` and generates a unique 8-character invite code.
+- Roommates who join with the invite code appear in the member list in join order.
+- Any non-member requesting household data receives `403 Forbidden`.
 
-**US2 按商品分账**
-作为付钱的人，我想按商品决定谁分，这样不吃的人不用付钱。
-- 默认每个商品所有成员都分
-- 取消勾选某人后，这个商品的钱由剩下的人平分
-- 只勾选一个人，这个商品就由他一个人付
-- 所有人应付金额之和，等于小票总额，一分不差
+**US2 — Itemized Expense Splitting**
+As the payer, I want to choose who shared each item so people who didn’t have an item pay nothing for it.
+- Every household member is ticked on every item by default.
+- Unticking ("slashing") a member divides that item’s cost among the remaining ticked participants.
+- Ticking only one member assigns the entire item cost to that member.
+- The sum of all members’ computed shares equals the receipt total to the exact cent.
 
-**US3 结算**
-作为室友，我想随时看到自己欠谁多少。
-- 余额页显示每个人的净额（正数是别人欠他，负数是他欠别人）
-- 结算方案最多 n−1 笔转账（n 是成员数）
-- 标记"已转账"之后，双方余额立即更新
+**US3 — Balances & Settlement**
+As a roommate, I want to see what I owe and to whom at any time.
+- The balances view shows each member’s net amount in cents/dollars (positive = others owe them; negative = they owe others).
+- The settlement plan uses at most `n − 1` transfers (`n` = number of members).
+- Marking a transfer as paid immediately updates both members’ net balances.
 
-**US4 AI 扫小票**
-作为付钱的人，我想拍小票自动填商品，不用手打。
-- 上传图片后，得到一份可以编辑的草稿
-- 商品之和 + 税之和 ≠ 总额时，标红并且不让保存
-- 只有点了"确认"才入库
+**US4 — AI Receipt Scanning**
+As the payer, I want to snap a photo of a receipt to prefill items instead of typing them by hand.
+- Uploading an image creates an editable `DRAFT` expense.
+- When `sum(items) + sum(taxes) !== totalCents`, the mismatch is highlighted in red and saving/confirming is blocked.
+- The expense is finalized (`CONFIRMED`) and shares are stored only when the user clicks Confirm.
 
-**US5 实时更新**
-- 室友 A 保存了一笔账，室友 B 的余额页在 3 秒内更新，不用刷新
+**US5 — Real-Time Updates**
+- When Roommate A confirms an expense or records a settlement, Roommate B’s balances view updates within 3 seconds without a manual page reload.
 
-**US6 每月房租**
-- 每月 1 号生成一笔房租账单
-- 同一个月重复触发，也只生成一笔
+**US6 — Monthly Recurring Bills (Optional / Descoped First)**
+- Generates a monthly rent expense on the 1st of the month, idempotently (at most once per bill per calendar month).
 
-## 5. 分账规则（核心算法，纯函数，全部 TDD）
+## 5. Split Rules (Pure Functions, 100% TDD)
 
-所有金额用**整数分**（`amountCents`），不用浮点数。
+All monetary amounts use **integer cents** (`amountCents`), never floating-point numbers.
 
-### 5.1 舍入：最大余数法
-把 X 分钱分给 k 个人：每人先拿 ⌊X/k⌋，剩下的几分钱按成员加入顺序一人 1 分。
-- 例：1000 分给 3 人 → 334 / 333 / 333
+### 5.1 Rounding: Largest-Remainder Method
+To divide `X` cents among `k` people: each person first receives `⌊X / k⌋`, and the remaining `X mod k` cents are distributed `1` cent each in member join order.
+- Example: `1000` cents across 3 members → `334 / 333 / 333`.
 
-### 5.2 分税
-每种税（GST、PST）按价格比例分到带这种税的商品上，再用最大余数法补齐，保证和小票上的税额一分不差。
-- 例：GST 50 分，薯片 499、汽水 299 → 31.27 / 18.73 → **31 / 19**
+### 5.2 Tax Allocation
+Each tax line (e.g., `GST`, `PST`) is allocated across the items carrying that tax code in proportion to item price, rounded via the largest-remainder rule so the allocated tax sums match the receipt tax line to the cent.
+- Example: `GST = 50` cents across Chips (`499`) and Soda (`299`) → `31.27 / 18.73` → **`31 / 19`**.
 
-### 5.3 每个商品的分摊
-商品金额 = 价格 + 分到它头上的税；再在勾选的人之间按 5.1 平分。
+### 5.3 Itemized Allocation Example
+Each item’s total cost (`priceCents + allocatedTaxCents`) is split evenly among its ticked participants using §5.1:
 
-| 商品 | 金额 | A | B | C |
+| Item | Amount (cents) | Ada | Bo | Cy |
 |---|---|---|---|---|
-| 牛奶 | 600 | ✅ 200 | ✅ 200 | ✅ 200 |
-| 啤酒（C 不喝） | 1200 | ✅ 600 | ✅ 600 | ❌ |
-| 酸奶（只有 C） | 300 | ❌ | ❌ | ✅ 300 |
-| **合计 2100** | | **800** | **800** | **500** |
+| Milk | 600 | ✅ 200 | ✅ 200 | ✅ 200 |
+| Beer (Cy slashed) | 1200 | ✅ 600 | ✅ 600 | ❌ 0 |
+| Yogurt (only Cy) | 300 | ❌ 0 | ❌ 0 | ✅ 300 |
+| **Total: 2100** | | **800** | **800** | **500** |
 
-### 5.4 三种分账模式
+### 5.4 Three Split Modes
 
-| 模式 | 规则 |
+| Mode | Rule |
 |---|---|
-| `EQUAL` | 整单平分（一键 Split） |
-| `RATIO` | 整单按权重分，例如主卧 40、次卧 30、次卧 30 |
-| `ITEMIZED` | 按商品勾选（5.3） |
+| `EQUAL` | Whole bill divided equally across all household members |
+| `RATIO` | Whole bill divided by integer member weights (e.g., `40 / 30 / 30`) |
+| `ITEMIZED` | Per-item participant selection with proportional tax allocation (§5.3) |
 
-三种模式不混用，一笔账只用一种。
+### 5.5 Discounts
+A discount is represented as a negative-price item line; by default all members participate, and participants can be adjusted per line. Negative amounts do not attract tax.
 
-### 5.5 折扣
-折扣是一行负价商品，参与人默认和全部成员一样，用户可以改。
+### 5.6 Net Balances & Greedy Settlement Plan
+- `netCents = paidCents − owedCents + sentSettlementCents − receivedSettlementCents`
+- Greedy settlement algorithm: repeatedly match the largest debtor with the largest creditor for `min(-debtor, creditor)`, producing at most `n − 1` transfers.
+- Example: `Ada +2000`, `Bo −500`, `Cy −1500` → `Cy pays Ada 1500`, `Bo pays Ada 500`.
 
-### 5.6 余额与结算方案
-- 净额 = 我付的 − 我应付的 + 我转出去的 − 我收到的
-- 结算用贪心算法：每次让欠最多的人转给被欠最多的人，最多 n−1 笔
-- 这不保证全局最少笔数（那是 NP-hard 问题），但几个人的合租足够用
-- 例：A +2000、B −500、C −1500 → C 转 A 1500，B 转 A 500
+## 6. AI Receipt Scanning Flow
 
-## 6. AI 扫小票
-
-一次调用：图片进，JSON 出，用 JSON schema 强制输出格式。
+Single structured multimodal call to Gemini Flash using `responseSchema`:
 
 ```json
 {
@@ -128,252 +124,171 @@ CS6983 Project 2 · 双人项目 · 截止 2026-11-12（周四）23:59
 }
 ```
 
-| 步骤 | 做什么 |
+| Step | Action |
 |---|---|
-| 1 | 图片存进 Vercel Blob（限 jpg/png/heic，10 MB 以内） |
-| 2 | 调 Gemini，拿到上面的 JSON，再用 zod 校验格式 |
-| 3 | 存成 `DRAFT` 状态的账单 |
-| 4 | 用户在确认页修改；校验不通过就标红，不让保存 |
-| 5 | 确认后改为 `CONFIRMED`，计算每人分摊并存库 |
+| 1 | Upload receipt image (jpg/png/heic/webp ≤ 10 MB) to Vercel Blob |
+| 2 | Call Gemini Flash with `responseSchema`, then validate with zod |
+| 3 | Save as a `DRAFT` expense |
+| 4 | User reviews/edits the draft; if `items + taxes !== totalCents`, highlight in red and block confirmation |
+| 5 | On Confirm, mark `CONFIRMED` and compute/persist `ExpenseShare` rows |
 
-- AI 和手动录入进的是同一份商品清单，AI 出问题时核心功能照样能用
-- 测试和 CI 里不调真 AI，用固定的 JSON 样例代替（`tests/fixtures/receipts/`）
+- Unit, integration, and CI tests never call the live Gemini API; they use deterministic fixtures in `tests/fixtures/receipts/`.
 
-## 7. 技术栈
+## 7. Tech Stack
 
-| 层 | 选型 |
+| Layer | Choice |
 |---|---|
-| 框架 | Next.js（App Router）+ TypeScript |
-| 样式 | Tailwind |
-| 数据库 | PostgreSQL（Neon）+ Prisma |
-| 认证 | Better Auth：Google OAuth + JWT session（cookie cache 用 JWT）；测试环境另开账号密码登录 |
-| 校验 | zod |
-| API 文档 | 从 zod 生成 OpenAPI，`/api/docs` 用 Swagger UI 展示 |
-| 文件存储 | Vercel Blob |
-| AI | Gemini API（Flash 系列，用 `responseSchema` 结构化输出），key 由 Jiaming 提供，存在 `GEMINI_API_KEY` |
-| 实时 | Pusher Channels（免费版） |
-| 定时任务 | Vercel Cron |
-| 测试 | Vitest、Testing Library、Playwright |
+| Framework | Next.js 16.4 (App Router) + TypeScript (strict) |
+| Styling | Tailwind CSS 4 |
+| Database | PostgreSQL 17 (Neon in cloud, Docker locally) + Prisma 7.10.1 (`@prisma/adapter-pg`) |
+| Authentication | Better Auth 1.7.18: Google OAuth + JWT cookie-cache session; email/password test login enabled only outside production |
+| Validation | zod 4 |
+| API Docs | OpenAPI 3.1 generated from zod schemas (`/api/openapi.json`) + interactive Swagger UI (`/api/docs`) |
+| File Storage | Vercel Blob |
+| AI | Gemini API (Flash series with `responseSchema`), key provided by Marcus Ramos in `GEMINI_API_KEY` |
+| Real-Time | Pusher Channels |
+| Testing | Vitest 5 (unit & integration), Playwright 1.64 (E2E on desktop & mobile viewports) |
 | CI/CD | GitHub Actions + Vercel |
-| 安全 | CodeQL、npm audit、gitleaks、Dependabot |
+| Security | CodeQL, `npm audit`, gitleaks, Dependabot |
 
-## 8. 架构
+## 8. Architecture
 
 ```mermaid
 flowchart LR
-  U[浏览器 / 手机] --> N[Next.js on Vercel]
-  N -->|Prisma| DB[(Neon Postgres)]
-  N -->|图片| B[Vercel Blob]
-  N -->|小票识别| AI[视觉 LLM]
-  N -->|推送事件| P[Pusher]
-  P -->|实时更新| U
-  C[Vercel Cron] -->|每月房租| N
-  EXT[第三方 API 调用者] -->|Bearer token| N
+  U["Browser / Mobile"] --> N["Next.js on Vercel"]
+  N -->|Prisma| DB[("Neon Postgres")]
+  N -->|Receipt Image| B["Vercel Blob"]
+  N -->|Receipt OCR| AI["Gemini Vision LLM"]
+  N -->|Push Event| P["Pusher Channels"]
+  P -->|Real-Time Refresh| U
+  EXT["External API Client"] -->|Bearer Token| N
 ```
 
-### 8.1 数据模型
+### 8.1 Data Model
 
-| 表 | 主要字段 |
+| Table | Primary Fields |
 |---|---|
-| `User` | id, email, name, image |
-| `Household` | id, name, inviteCode, createdAt |
-| `Membership` | userId, householdId, role（`OWNER`/`MEMBER`）, joinedAt |
-| `Expense` | id, householdId, payerId, merchant, date, totalCents, splitMode, status（`DRAFT`/`CONFIRMED`）, receiptUrl |
-| `ExpenseItem` | id, expenseId, name, priceCents, taxCodes |
-| `ItemParticipant` | itemId, userId |
-| `ExpenseTax` | id, expenseId, code, amountCents |
-| `ExpenseWeight` | expenseId, userId, weight（仅 `RATIO` 模式） |
-| `ExpenseShare` | expenseId, userId, amountCents（确认时算好存库，算余额用） |
-| `Settlement` | id, householdId, fromUserId, toUserId, amountCents, paidAt |
-| `RecurringBill` | id, householdId, name, amountCents, payerId, dayOfMonth |
-| `RecurringRun` | billId, month（两列联合唯一，防止重复生成） |
-| `ApiToken` | id, userId, name, tokenHash, lastUsedAt |
+| `User` | `id`, `email`, `name`, `image`, `emailVerified` |
+| `Household` | `id`, `name`, `inviteCode`, `createdAt` |
+| `Membership` | `userId`, `householdId`, `role` (`OWNER` / `MEMBER`), `joinedAt` |
+| `Expense` | `id`, `householdId`, `payerId`, `merchant`, `date` (`YYYY-MM-DD`), `totalCents`, `splitMode`, `status` (`DRAFT` / `CONFIRMED`), `receiptUrl` |
+| `ExpenseItem` | `id`, `expenseId`, `name`, `priceCents`, `taxCodes`, `sortOrder` |
+| `ItemParticipant` | `itemId`, `userId` |
+| `ExpenseTax` | `id`, `expenseId`, `code`, `amountCents`, `sortOrder` |
+| `ExpenseWeight` | `expenseId`, `userId`, `weight` (used in `RATIO` mode) |
+| `ExpenseShare` | `expenseId`, `userId`, `amountCents` (computed shares persisted on confirm/save) |
+| `Settlement` | `id`, `householdId`, `fromUserId`, `toUserId`, `amountCents`, `paidAt` |
+| `ApiToken` | `id`, `userId`, `name`, `tokenHash`, `lastUsedAt`, `createdAt` |
 
-### 8.2 API（`/api/v1`）
+### 8.2 Public REST API (`/api/v1`)
 
-| 方法 | 路径 | 作用 |
+| Method | Path | Purpose |
 |---|---|---|
-| GET / POST | `/households` | 我的房间列表 / 创建房间 |
-| POST | `/households/join` | 用邀请码加入 |
-| GET | `/households/{id}/members` | 成员列表 |
-| GET / POST | `/households/{id}/expenses` | 账单列表 / 新建 |
-| GET / PATCH / DELETE | `/households/{id}/expenses/{eid}` | 查看 / 修改 / 删除 |
-| POST | `/households/{id}/expenses/{eid}/confirm` | 草稿确认入库 |
-| POST | `/households/{id}/receipts/scan` | 上传小票，返回草稿 |
-| GET | `/households/{id}/balances` | 每人净额 |
-| GET | `/households/{id}/settlement-plan` | 转账方案 |
-| POST | `/households/{id}/settlements` | 记录已转账 |
-| GET / POST | `/households/{id}/recurring-bills` | 每月账单 |
-| GET / POST / DELETE | `/tokens` | 管理个人 API token |
-| GET | `/api/openapi.json`、`/api/docs` | OpenAPI 文档、Swagger UI |
+| `GET` / `POST` | `/api/v1/households` | List caller’s households / create a household |
+| `POST` | `/api/v1/households/join` | Join a household by invite code |
+| `GET` | `/api/v1/households/{id}/members` | List members in join order |
+| `GET` / `POST` | `/api/v1/households/{id}/expenses` | List expenses / record an expense |
+| `GET` / `PATCH` / `DELETE` | `/api/v1/households/{id}/expenses/{eid}` | View / update / delete an expense |
+| `POST` | `/api/v1/households/{id}/expenses/{eid}/confirm` | Confirm a draft receipt expense |
+| `POST` | `/api/v1/households/{id}/receipts/scan` | Upload a receipt image and create a draft expense |
+| `GET` | `/api/v1/households/{id}/balances` | Compute net balances per member |
+| `GET` | `/api/v1/households/{id}/settlement-plan` | Compute greedy settlement transfers |
+| `POST` | `/api/v1/households/{id}/settlements` | Record a completed transfer |
+| `GET` / `POST` / `DELETE` | `/api/v1/tokens` | Manage personal Bearer API tokens |
+| `GET` | `/api/openapi.json`, `/api/docs` | OpenAPI 3.1 JSON spec & Swagger UI |
 
-每个 `/households/{id}/...` 路由都先检查调用者是不是成员；这条检查要有集成测试。
+Every `/api/v1/households/{id}/...` route verifies membership first and responds with `403` for non-members (covered by integration tests).
 
-### 8.3 目录结构
+### 8.3 Directory Layout
 
 ```
 src/
-  app/                  页面
-  app/api/v1/           API 路由（只做参数解析和权限检查）
-  lib/split/            分账算法（纯函数）
-  lib/receipt/          AI 调用 + 解析
-  server/               数据库操作（service 层）
-prisma/                 schema + migrations
-tests/unit/             单元测试
-tests/integration/      集成测试（真实 Postgres）
-tests/fixtures/         小票 JSON 样例
-e2e/                    Playwright
-docs/                   架构图、sprint 记录、standup、回顾、AI 使用记录
-AGENTS.md
+  app/                  Next.js pages and layouts
+  app/api/v1/           Public REST API route handlers (parse, authorize, call services)
+  lib/split/            Pure split & settlement functions (no I/O, no Prisma)
+  lib/receipt/          Gemini receipt extraction & zod validation
+  lib/schemas/          Shared zod schemas for routes, server actions, and OpenAPI
+  server/               Database service layer (only place that calls Prisma)
+prisma/                 Prisma schema and SQL migrations
+tests/unit/             Vitest unit tests
+tests/integration/      Vitest integration tests against real PostgreSQL
+tests/fixtures/         Deterministic receipt JSON fixtures
+e2e/                    Playwright end-to-end specs
+docs/                   Project plan, sprint logs, architecture, schema, setup, AI usage
+AGENTS.md               Shared AI coding agent rules
 ```
 
-## 9. 测试与 TDD
+## 9. Testing & TDD Workflow
 
-| 层 | 工具 | 测什么 |
+| Layer | Tool | Coverage |
 |---|---|---|
-| 单元 | Vitest | `lib/split/` 全部规则、小票 JSON 解析、校验 |
-| 集成 | Vitest + 真实 Postgres | API 路由 + 数据库 + 权限（非成员返回 403） |
-| E2E | Playwright | 登录 → 建房间 → 记一笔按商品分的账 → 看余额 → 结算 |
+| Unit | Vitest | `src/lib/split/` rules, OpenAPI spec completeness, receipt parsing/validation |
+| Integration | Vitest + PostgreSQL | API route handlers + Prisma services + 401/403 authorization checks |
+| E2E | Playwright | Sign-in → create/join household → record itemized & equal expenses → check balances → mark transfer paid |
 
-**TDD 怎么在 Git 历史里体现**
+**TDD in Git History (`Red → Green → Refactor`)**
 
-| Commit | 内容 | 状态 |
+| Commit | Contents | Branch CI |
 |---|---|---|
-| `test: itemized split excludes slashed member` | 只有测试 | CI 红 |
-| `feat: implement itemized split` | 实现 | CI 绿 |
-| `refactor: extract largest-remainder helper` | 整理 | CI 绿 |
+| `test(<scope>): <rule> (#n)` | Failing tests only | Red (expected) |
+| `feat(<scope>): <summary> (#n)` | Implementation making the tests pass | Green |
+| `refactor(<scope>): <summary> (#n)` | Cleanup without behavior change | Green |
 
-- 写测试前，先把验收标准（§4）给 AI，让它先生成失败测试
-- 测试先写、单独 commit，不能和实现放在同一个 commit
-
-## 10. CI/CD
+## 10. CI/CD Pipeline
 
 ```mermaid
 flowchart LR
-  A[安装 + lint + 类型检查] --> B[单元测试]
-  B --> C[集成测试]
-  A --> S[安全扫描]
-  C --> D[构建]
+  A["Install + Lint + Typecheck"] --> B["Unit Tests"]
+  B --> C["Integration Tests (Postgres 17)"]
+  A --> S["Security Scans (CodeQL, npm audit, gitleaks)"]
+  C --> D["Next.js Build"]
   S --> D
-  D --> E[Vercel 预览部署]
-  E --> F[Playwright 跑预览地址]
-  F --> G{合并到 main?}
-  G -->|是| H[数据库迁移 + 生产部署]
+  D --> E["Vercel Preview Deployment"]
+  E --> F["Playwright E2E"]
+  F --> G{"Merge to main?"}
+  G -->|Yes| H["prisma migrate deploy + Vercel Production"]
 ```
 
-| 阶段 | 触发 | 内容 |
+## 11. AI Workflow (`AGENTS.md` & `docs/ai-usage.md`)
+
+- Primary AI IDE harness: **Antigravity** / **Claude Code**, governed by [`AGENTS.md`](../AGENTS.md).
+- Both partners (**Theodore Pei** and **Marcus Ramos**) maintain and commit updates to `AGENTS.md` across Sprint 1 and Sprint 2.
+- Prompt engineering patterns, AI failure modes, and rule updates are logged in `docs/ai-usage.md`.
+
+## 12. Sprint Plan
+
+The project is organized into three milestones with clear ownership and cross-partner PR reviews:
+
+- **[Sprint 1 Plan (`docs/sprints/sprint1.md`)](sprints/sprint1.md)** (**2026-11-07 – 2026-11-10**): Core foundation, CI/CD, authentication, households, split & settlement engine, manual expense recording, balances UI/API, and OpenAPI/Swagger skeleton.
+  - **Development Lead**: **Theodore Pei** (Issues `#1`–`#8`)
+  - **PR Review & Merge Lead**: **Marcus Ramos** (Reviews and approves Sprint 1 PRs)
+- **[Sprint 2 Plan (`docs/sprints/sprint2.md`)](sprints/sprint2.md)** (**2026-11-10 – 2026-11-13**): AI receipt scanning, draft confirmation UI, real-time Pusher updates, public API Bearer tokens, preview E2E suite, UI polish, and final documentation.
+  - **Development Lead**: **Marcus Ramos** (Issues `#9`, `#10`, `#11`, `#13`, `#14`, `#15`, `#16`)
+  - **PR Review & Merge Lead**: **Theodore Pei** (Reviews and approves Sprint 2 PRs)
+- **Sprint 3 (Project Wrap-Up)**: End-to-end product demo video recording, individual reflections, final documentation review, and submission chores (**Theodore Pei** + **Marcus Ramos**).
+
+## 13. Deliverables Checklist
+
+| Deliverable | Location | Owner |
 |---|---|---|
-| 检查 | 每个 PR | `lint`、`tsc --noEmit` |
-| 测试 | 每个 PR | 单元测试；集成测试用 GitHub Actions 的 Postgres service |
-| 安全 | 每个 PR + 每周一次 | CodeQL、`npm audit --audit-level=high`、gitleaks |
-| 预览 | 每个 PR | Vercel 自动出预览地址；Neon 给这个 PR 开一个数据库分支 |
-| E2E | 预览部署好之后 | Playwright 跑预览地址 |
-| 生产 | 合并到 main | `prisma migrate deploy` + Vercel 生产部署 |
+| README | `README.md` | Theodore Pei + Marcus Ramos |
+| Interactive API Docs & Guide | `/api/docs` + `docs/api.md` | Theodore Pei (`#8`) + Marcus Ramos (`#13`, `docs/api.md`) |
+| Architecture Diagram | `docs/architecture.md` (Mermaid) | Theodore Pei |
+| Database Schema Diagram | `docs/schema.md` (Mermaid ER diagram) | Marcus Ramos |
+| Local Setup & Deployment Guide | `docs/setup.md` | Marcus Ramos |
+| Sprint Planning, Standups & Retrospectives | `docs/sprints/` | Theodore Pei + Marcus Ramos |
+| AI Usage Log | `docs/ai-usage.md` | Theodore Pei + Marcus Ramos |
+| Partner Contribution Log | `docs/contributions.md` | Theodore Pei + Marcus Ramos |
+| 10-Minute Demo Video | Linked in `README.md` | Theodore Pei + Marcus Ramos |
+| Production Deployment URL | `https://slashsplit.vercel.app` (in `README.md`) | Theodore Pei |
+| Individual 300-Word Reflection | Submitted individually on Canvas | Each partner separately |
 
-main 分支保护：必须所有检查通过，并且搭档 approve 一次，才能合并。
+## 14. Risk Mitigation
 
-**环境**
-
-| 环境 | 数据库 | 登录 | AI |
-|---|---|---|---|
-| 本地 | Docker Postgres 或 Neon dev 分支 | Google + 测试账号 | 真调用（自己的 key） |
-| CI | GitHub Actions Postgres | 测试账号 | 固定 JSON 样例 |
-| 预览 | 每个 PR 一个 Neon 分支 | Google + 测试账号 | 真调用 |
-| 生产 | Neon main | 只有 Google | 真调用 |
-
-密钥只放在 Vercel 和 GitHub Secrets 里；仓库里只提交 `.env.example`。
-
-## 11. AI 工作流（AI Mastery 30 分）
-
-主力工具：**Antigravity**。
-
-**AGENTS.md 要写的内容**
-- 技术栈和常用命令（dev、test、e2e、migrate）
-- TDD 规则：先写失败测试并单独 commit，再写实现
-- 金额一律整数分；测试里不调真 AI
-- 目录约定：算法只放 `lib/split/`，API 路由不写业务逻辑
-- PR 检查清单
-
-**留证据**
-- `docs/ai-usage.md`：每个 sprint 记几条好用的 prompt、AI 犯过的错、我们怎么修 AGENTS.md
-- AGENTS.md 每个 sprint 至少更新一次，两人都要有 commit
-
-## 12. Sprint 计划
-
-| 时间 | 阶段 |
+| Risk | Mitigation |
 |---|---|
-| 11/6（五） | 两人一起做 sprint 计划；开好 GitHub、Vercel、Neon、Google OAuth、Pusher 账号 |
-| 11/7（六）– 11/9（一） | Sprint 1 |
-| 11/10（二）– 11/12（四） | Sprint 2（先砍 #12 每月房租） |
-| 11/12（四） | 文档、demo 视频、个人反思 |
-
-估算单位是故事点（1、2、3、5）。甲 = Jiaming，乙 = 搭档。
-
-### Sprint 1：能记账、能结算
-
-| # | Issue | 点数 | 负责人 |
-|---|---|---|---|
-| 1 | 项目骨架 + Prisma + Neon + Vercel 生产部署 | 3 | 甲 |
-| 2 | CI：lint、类型检查、单元、集成、安全扫描 | 3 | 乙 |
-| 3 | 登录：Google + 测试账号 | 3 | 乙 |
-| 4 | 合租房间 + 邀请码 | 3 | 甲 |
-| 5 | 分账算法（§5.1–5.5） | 5 | 甲 |
-| 6 | 手动记账页面 + API（按商品勾选） | 5 | 乙 |
-| 7 | 余额 + 结算方案 + 记录已转账 | 3 | 甲 |
-| 8 | OpenAPI + Swagger 骨架 | 2 | 乙 |
-
-### Sprint 2：AI、实时、上线
-
-| # | Issue | 点数 | 负责人 |
-|---|---|---|---|
-| 9 | 小票上传 + AI 识别成草稿 | 5 | 甲 |
-| 10 | 草稿确认页：校验标红、可编辑 | 3 | 乙 |
-| 11 | 实时更新（Pusher） | 3 | 乙 |
-| 12 | 每月房租 + Cron | 3 | 甲 |
-| 13 | 公开 API token + 文档补全 | 3 | 乙 |
-| 14 | Playwright E2E 跑在预览地址上 | 3 | 甲 |
-| 15 | PR 预览 + Neon 分支 + 生产自动迁移 | 2 | 乙 |
-| 16 | UI 打磨 + 手机适配 | 3 | 甲 + 乙 |
-
-**每个 sprint 要留下的记录**（放在 `docs/sprints/`）
-- 计划会：两人都在，记下选了哪些 issue、怎么估的点
-- standup：每人每天一条（昨天做了什么、今天做什么、卡在哪）
-- 回顾：好的、不好的、对搭档的反馈、下个 sprint 改什么
-
-## 13. 交付清单
-
-| 交付物 | 位置 | 负责人 |
-|---|---|---|
-| README | `README.md` | 甲 + 乙 |
-| API 文档 | `/api/docs` + `docs/api.md` | 乙 |
-| 架构图 | `docs/architecture.md`（mermaid） | 甲 |
-| 数据库 schema 图 | `docs/schema.md`（mermaid ER 图） | 乙 |
-| 本地运行和部署指南 | `docs/setup.md` | 乙 |
-| Sprint 回顾 | `docs/sprints/` | 甲 + 乙 |
-| 贡献记录 | `docs/contributions.md` | 甲 + 乙 |
-| 10 分钟 demo 视频 | 链接放进 README | 甲 + 乙 |
-| 生产地址 | 放进 README | 甲 |
-| 个人反思（300 字） | 各自在 Canvas 单独提交 | 各自 |
-
-## 14. 风险
-
-| 风险 | 应对 |
-|---|---|
-| AI 识别不准 | 只出草稿；手动录入永远能用 |
-| 11 天太紧 | 先砍 F6 每月房租，再砍比例分 |
-| Playwright 没法过 Google 登录 | 测试账号登录只在非生产环境开启 |
-| 一个人做太多，扣贡献分 | 按上表分 issue；每人至少 review 5 个 PR |
-| 浮点误差 | 全程整数分，并有"分摊之和 = 总额"的测试 |
-| 免费额度用完 | Neon、Vercel、Pusher 都用免费版；AI 调用只在用户点"扫描"时发生 |
-
-## 15. 待定
-
-- 搭档是谁，各自负责哪些 issue
-- 正式名字（SlashSplit 是暂定名）
-
-## 16. 已定
-
-| 事项 | 决定 |
-|---|---|
-| AI 服务商 | Gemini，Jiaming 出 key |
-| 仓库 | Jiaming 建，加搭档为 collaborator（需要 push 权限） |
+| AI receipt extraction inaccuracies | AI outputs only a `DRAFT` expense; manual editing and validation gate confirmation |
+| Tight schedule | Cut `#12` (monthly recurring rent cron) first; core app already exceeds 3+ distinct features |
+| Playwright cannot automate Google OAuth login | Email/password test login enabled strictly when `NODE_ENV !== "production"` |
+| Floating-point rounding drift | All amounts stored and computed as integer cents (`*Cents`) with sum-assertion tests |
+| Unbalanced reviews or commits | Sprint 1 implemented by Theodore & reviewed by Marcus; Sprint 2 implemented by Marcus & reviewed by Theodore |
