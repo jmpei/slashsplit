@@ -1,0 +1,1 @@
+{"merchant":"Costco","date":"2026-11-01","items":[{"name":"Milk 2%","priceCents":599,"taxes":[]},{"name":"Chips","priceCents":499,"taxes":["GST"]}],"taxes":[{"code":"GST","amountCents":25}],"totalCents":9999}
