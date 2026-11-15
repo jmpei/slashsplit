@@ -17,6 +17,11 @@ export function testLoginEnabled(nodeEnv: string | undefined = process.env.NODE_
   return nodeEnv !== "production";
 }
 
+export function authBaseURL(env: { BETTER_AUTH_URL?: string; VERCEL_URL?: string }): string | undefined {
+  void env;
+  return undefined;
+}
+
 function googleFromEnv(): AuthOptions["google"] {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;

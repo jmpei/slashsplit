@@ -24,4 +24,18 @@ describe("prisma.config.ts database URL", () => {
     vi.stubEnv("DATABASE_URL", "postgresql://pooled");
     expect(await configuredUrl()).toBe("postgresql://pooled");
   });
+
+  test("uses the Neon integration's DATABASE_URL_UNPOOLED when DIRECT_URL is unset", async () => {
+    vi.stubEnv("DIRECT_URL", "");
+    vi.stubEnv("DATABASE_URL_UNPOOLED", "postgresql://unpooled");
+    vi.stubEnv("DATABASE_URL", "postgresql://pooled");
+    expect(await configuredUrl()).toBe("postgresql://unpooled");
+  });
+
+  test("prefers DIRECT_URL over DATABASE_URL_UNPOOLED", async () => {
+    vi.stubEnv("DIRECT_URL", "postgresql://direct");
+    vi.stubEnv("DATABASE_URL_UNPOOLED", "postgresql://unpooled");
+    vi.stubEnv("DATABASE_URL", "postgresql://pooled");
+    expect(await configuredUrl()).toBe("postgresql://direct");
+  });
 });
