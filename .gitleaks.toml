@@ -1,0 +1,10 @@
+# Extend the built-in gitleaks rules and ignore dummy test secrets in test suites.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore dummy placeholder secrets in test files"
+paths = [
+  '''^tests/''',
+  '''^e2e/''',
+]
