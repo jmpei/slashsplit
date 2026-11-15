@@ -39,7 +39,7 @@ Every feature PR below must follow `AGENTS.md` §3 (**Commit 1 = Red failing tes
    - Extend `currentUserId` in `src/server/api.ts` to authenticate `Authorization: Bearer <token>` headers alongside session cookies.
 2. **PR 2 — Issue `#9`: Receipt Upload & Gemini AI Scan to Draft (`feature/9-receipt-scan`)**
    - Implement `src/lib/receipt/` using Gemini Flash (`responseSchema`) + zod validation.
-   - Implement `POST /api/v1/households/{id}/receipts/scan`: validate image type (`jpg`, `png`, `heic`, `webp`) and size (`≤ 10 MB`), upload to Vercel Blob (with local/test fallback), and create an `Expense` with `status: "DRAFT"`.
+   - Implement `POST /api/v1/households/{id}/receipts/scan`: validate image type (`jpg`, `png`, `heic`, `webp`) and size (`≤ 10 MB`) on the server without storing the image, and create an `Expense` with `status: "DRAFT"`.
    - Use deterministic JSON fixtures from `tests/fixtures/receipts/` in all unit and integration tests (never call live Gemini in tests/CI).
 3. **PR 3 — Issue `#10`: Draft Receipt Review & Confirm (`feature/10-draft-confirm`)**
    - Build the draft review/edit UI and `POST /api/v1/households/{id}/expenses/{eid}/confirm`.

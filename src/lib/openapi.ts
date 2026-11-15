@@ -5,6 +5,7 @@ import { expenseBody } from "@/lib/schemas/expenses";
 import { createHouseholdBody, joinHouseholdBody } from "@/lib/schemas/households";
 import { recordSettlementBody } from "@/lib/schemas/settlements";
 import { createTokenBody } from "@/lib/schemas/tokens";
+import { scanReceiptJsonBody } from "@/lib/schemas/receipts";
 
 function jsonSchema(schema: z.ZodType) {
   const { $schema: _unused, ...rest } = z.toJSONSchema(schema) as Record<string, unknown>;
@@ -35,7 +36,7 @@ const expenseRecordSchema = expenseBody.extend({
   id: z.string(),
   householdId: z.string(),
   status: z.enum(["DRAFT", "CONFIRMED"]),
-  receiptUrl: z.string().nullable(),
+  scanError: z.string().nullable().describe("Why the receipt scan failed; set only on such drafts (#9)."),
   shares: z.array(shareSchema),
 });
 const balanceSchema = z.object({
@@ -328,6 +329,38 @@ export function buildOpenApiSpec() {
             "204": { description: "Expense deleted." },
             "404": {
               description: "Expense not found.",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
+            },
+            ...authErrors,
+          },
+        },
+      },
+      "/api/v1/households/{id}/receipts/scan": {
+        post: {
+          summary: "Scan a receipt image into a DRAFT itemized expense (the image is not stored)",
+          description:
+            "Accepts a jpg, png, heic or webp image up to 10 MB. Gemini's reply becomes a DRAFT with every member ticked on every item; a reply that fails validation becomes an empty DRAFT with `scanError`. Drafts do not affect balances.",
+          parameters: [idParam],
+          requestBody: {
+            required: true,
+            content: {
+              "multipart/form-data": {
+                schema: {
+                  type: "object",
+                  properties: { file: { type: "string", format: "binary" } },
+                  required: ["file"],
+                },
+              },
+              "application/json": { schema: jsonSchema(scanReceiptJsonBody) },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Created DRAFT expense (empty with scanError if the scan could not be read).",
+              content: { "application/json": { schema: jsonSchema(expenseRecordSchema) } },
+            },
+            "400": {
+              description: "Missing file, unsupported image type, or larger than 10 MB.",
               content: { "application/json": { schema: jsonSchema(errorSchema) } },
             },
             ...authErrors,
