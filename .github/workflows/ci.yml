@@ -99,7 +99,7 @@ jobs:
 
   build:
     name: Build
-    needs: [integration, audit, gitleaks]
+    needs: [integration, audit]
     runs-on: ubuntu-latest
     env:
       # Placeholders so modules that read env at import can load; the build never connects.
