@@ -42,6 +42,7 @@ export function googleSignInEnabled(): boolean {
 
 export function createAuth(options: AuthOptions = {}) {
   const google = options.google ?? googleFromEnv();
+  const testLogin = testLoginEnabled(options.nodeEnv, options.vercelEnv);
   return betterAuth({
     secret: options.secret ?? process.env.BETTER_AUTH_SECRET,
     baseURL:
@@ -51,7 +52,10 @@ export function createAuth(options: AuthOptions = {}) {
         VERCEL_URL: process.env.VERCEL_URL,
       }),
     database: prismaAdapter(prisma, { provider: "postgresql" }),
-    emailAndPassword: { enabled: testLoginEnabled(options.nodeEnv, options.vercelEnv) },
+    emailAndPassword: { enabled: testLogin },
+    // Better Auth would limit sign-in and sign-up to 3 per 10 s per IP on previews too (they run with
+    // NODE_ENV=production), which breaks E2E there; production, without the test login, stays limited.
+    rateLimit: { enabled: !testLogin },
     socialProviders: google ? { google } : {},
     session: { cookieCache: { enabled: true, maxAge: 5 * 60, strategy: "jwt" } },
     plugins: [nextCookies()],

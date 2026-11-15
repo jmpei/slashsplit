@@ -84,3 +84,36 @@ describe("authBaseURL", () => {
     expect(authBaseURL({})).toBeUndefined();
   });
 });
+
+// Better Auth limits /sign-in and /sign-up to 3 requests per 10 s per IP whenever NODE_ENV is
+// production, which previews are. Every E2E run signs up dozens of users from one CI runner, so the
+// limiter follows the test login: off wherever the test login is on, on in production.
+describe("rate limiting", () => {
+  // Sends four sign-in attempts from one IP straight to the auth handler; returns the status codes.
+  async function signInBurst(auth: ReturnType<typeof createAuth>, ip: string): Promise<number[]> {
+    const statuses: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      const response = await auth.handler(
+        new Request(`${baseURL}/api/auth/sign-in/email`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-forwarded-for": ip, origin: baseURL },
+          body: JSON.stringify({ email: email("nobody"), password }),
+        }),
+      );
+      statuses.push(response.status);
+    }
+    return statuses;
+  }
+
+  test("is off on a Vercel preview, where the test login is on", async () => {
+    const auth = createAuth({ nodeEnv: "production", vercelEnv: "preview", secret, baseURL });
+    expect(auth.options.rateLimit?.enabled).toBe(false);
+    expect(await signInBurst(auth, "203.0.113.10")).not.toContain(429);
+  });
+
+  test("is on in Vercel production, where the test login is off", async () => {
+    const auth = createAuth({ nodeEnv: "production", vercelEnv: "production", secret, baseURL });
+    expect(auth.options.rateLimit?.enabled).toBe(true);
+    expect(await signInBurst(auth, "203.0.113.11")).toContain(429);
+  });
+});
