@@ -8,7 +8,8 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    // Migrations need a direct connection; the app uses the pooled DATABASE_URL.
-    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
+    // Migrations need a direct connection; the app uses the pooled DATABASE_URL. `||`, not `??`:
+    // .env.example ships DIRECT_URL="", and an empty string must fall back too.
+    url: process.env["DIRECT_URL"] || process.env["DATABASE_URL"],
   },
 });
