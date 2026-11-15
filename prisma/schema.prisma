@@ -128,7 +128,8 @@ model Expense {
   totalCents  Int
   splitMode   SplitMode       @default(ITEMIZED)
   status      ExpenseStatus   @default(CONFIRMED)
-  receiptUrl  String?
+  // Set only on a draft whose receipt scan failed (#9); confirmed expenses never carry it.
+  scanError   String?
   createdAt   DateTime        @default(now())
   household   Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
   payer       User            @relation("ExpensePayer", fields: [payerId], references: [id], onDelete: Cascade)

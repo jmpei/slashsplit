@@ -66,9 +66,8 @@ All names are in [`.env.example`](.env.example).
 | `TEST_DATABASE_URL` | Integration tests (separate database) |
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Login |
 | `GEMINI_API_KEY` | Receipt scanning |
+| `RECEIPT_EXTRACTOR` | `fixture:<name>` serves a receipt fixture instead of Gemini (never in production) |
 | `PUSHER_APP_ID`, `PUSHER_SECRET`, `NEXT_PUBLIC_PUSHER_KEY`, `NEXT_PUBLIC_PUSHER_CLUSTER` | Real-time updates |
-| `BLOB_READ_WRITE_TOKEN` | Receipt image storage |
-| `CRON_SECRET` | Monthly rent job |
 | `E2E_BASE_URL`, `VERCEL_AUTOMATION_BYPASS_SECRET` | E2E against a preview deployment |
 | `DIRECT_URL` | Non-pooled database URL for migrations (production) |
 

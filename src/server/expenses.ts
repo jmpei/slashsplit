@@ -16,7 +16,7 @@ export type ExpenseRecord = {
   totalCents: number;
   splitMode: "EQUAL" | "RATIO" | "ITEMIZED";
   status: "DRAFT" | "CONFIRMED";
-  receiptUrl: string | null;
+  scanError: string | null;
   items: {
     id: string;
     name: string;
@@ -103,7 +103,7 @@ function formatExpense(
     totalCents: number;
     splitMode: "EQUAL" | "RATIO" | "ITEMIZED";
     status: "DRAFT" | "CONFIRMED";
-    receiptUrl: string | null;
+    scanError: string | null;
     items: {
       id: string;
       name: string;
@@ -130,7 +130,7 @@ function formatExpense(
     totalCents: row.totalCents,
     splitMode: row.splitMode,
     status: row.status,
-    receiptUrl: row.receiptUrl,
+    scanError: row.scanError,
     items: row.items.map((item) => ({
       id: item.id,
       name: item.name,

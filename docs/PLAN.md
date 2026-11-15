@@ -126,9 +126,9 @@ Single structured multimodal call to Gemini Flash using `responseSchema`:
 
 | Step | Action |
 |---|---|
-| 1 | Upload receipt image (jpg/png/heic/webp ≤ 10 MB) to Vercel Blob |
+| 1 | Upload receipt image (jpg/png/heic/webp ≤ 10 MB, checked on the server; the image is not stored) |
 | 2 | Call Gemini Flash with `responseSchema`, then validate with zod |
-| 3 | Save as a `DRAFT` expense |
+| 3 | Save as a `DRAFT` expense; a reply that fails validation becomes an empty `DRAFT` with `scanError` |
 | 4 | User reviews/edits the draft; if `items + taxes !== totalCents`, highlight in red and block confirmation |
 | 5 | On Confirm, mark `CONFIRMED` and compute/persist `ExpenseShare` rows |
 
@@ -144,7 +144,6 @@ Single structured multimodal call to Gemini Flash using `responseSchema`:
 | Authentication | Better Auth 1.7.18: Google OAuth + JWT cookie-cache session; email/password test login enabled only outside production |
 | Validation | zod 4 |
 | API Docs | OpenAPI 3.1 generated from zod schemas (`/api/openapi.json`) + interactive Swagger UI (`/api/docs`) |
-| File Storage | Vercel Blob |
 | AI | Gemini API (Flash series with `responseSchema`), key provided by Marcus Ramos in `GEMINI_API_KEY` |
 | Real-Time | Pusher Channels |
 | Testing | Vitest 5 (unit & integration), Playwright 1.64 (E2E on desktop & mobile viewports) |
@@ -157,7 +156,6 @@ Single structured multimodal call to Gemini Flash using `responseSchema`:
 flowchart LR
   U["Browser / Mobile"] --> N["Next.js on Vercel"]
   N -->|Prisma| DB[("Neon Postgres")]
-  N -->|Receipt Image| B["Vercel Blob"]
   N -->|Receipt OCR| AI["Gemini Vision LLM"]
   N -->|Push Event| P["Pusher Channels"]
   P -->|Real-Time Refresh| U
@@ -171,7 +169,7 @@ flowchart LR
 | `User` | `id`, `email`, `name`, `image`, `emailVerified` |
 | `Household` | `id`, `name`, `inviteCode`, `createdAt` |
 | `Membership` | `userId`, `householdId`, `role` (`OWNER` / `MEMBER`), `joinedAt` |
-| `Expense` | `id`, `householdId`, `payerId`, `merchant`, `date` (`YYYY-MM-DD`), `totalCents`, `splitMode`, `status` (`DRAFT` / `CONFIRMED`), `receiptUrl` |
+| `Expense` | `id`, `householdId`, `payerId`, `merchant`, `date` (`YYYY-MM-DD`), `totalCents`, `splitMode`, `status` (`DRAFT` / `CONFIRMED`), `scanError` |
 | `ExpenseItem` | `id`, `expenseId`, `name`, `priceCents`, `taxCodes`, `sortOrder` |
 | `ItemParticipant` | `itemId`, `userId` |
 | `ExpenseTax` | `id`, `expenseId`, `code`, `amountCents`, `sortOrder` |
