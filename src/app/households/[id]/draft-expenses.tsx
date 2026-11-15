@@ -4,6 +4,7 @@
 // only enables "Confirm expense" when they match. Confirming calls the confirm endpoint.
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { compressionSteps, needsCompression } from "@/lib/receipt/compress";
 import { formatCents, parseDollarsToCents, type DraftEdits } from "@/lib/schemas/expenses";
 import type { ExpenseRecord } from "@/server/expenses";
 import type { Member } from "@/server/households";
@@ -31,6 +32,40 @@ function toggle<T>(list: T[], value: T): T[] {
 async function errorMessage(res: Response): Promise<string> {
   const body = await res.json().catch(() => null);
   return body?.error ?? "Something went wrong. Try again.";
+}
+
+// Vercel rejects request bodies above about 4.5 MB before the scan route runs (#9), so a photo over
+// the upload budget is redrawn as a JPEG, smaller and lower quality each try, until it fits. Returns
+// null when the browser cannot decode the file (HEIC outside Safari) or no attempt fits.
+async function shrinkForUpload(file: File): Promise<File | null> {
+  if (!needsCompression(file.size)) return file;
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return null;
+  }
+  try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    for (const step of compressionSteps(bitmap)) {
+      canvas.width = step.width;
+      canvas.height = step.height;
+      ctx.fillStyle = "#fff"; // JPEG has no transparency; keep transparent PNG areas white, not black
+      ctx.fillRect(0, 0, step.width, step.height);
+      ctx.drawImage(bitmap, 0, 0, step.width, step.height);
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", step.quality),
+      );
+      if (blob && !needsCompression(blob.size)) {
+        return new File([blob], file.name.replace(/\.[^.]*$/, "") + ".jpg", { type: "image/jpeg" });
+      }
+    }
+    return null;
+  } finally {
+    bitmap.close();
+  }
 }
 
 export function DraftExpenses(props: {
@@ -78,6 +113,14 @@ function ScanForm(props: { householdId: string }) {
       return;
     }
     startTransition(async () => {
+      const upload = await shrinkForUpload(file);
+      if (!upload) {
+        setError(
+          "This photo is too large to upload and this browser can't shrink it. Save it as a JPG under 4 MB and try again.",
+        );
+        return;
+      }
+      data.set("file", upload);
       const res = await fetch(`/api/v1/households/${props.householdId}/receipts/scan`, {
         method: "POST",
         body: data,
