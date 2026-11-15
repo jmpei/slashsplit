@@ -15,6 +15,7 @@
     "db:up": "docker compose up -d db",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
+    "vercel-build": "node scripts/vercel-build.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
