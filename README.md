@@ -1,10 +1,14 @@
 # SlashSplit
 
+[![CI](https://github.com/jmpei/slashsplit/actions/workflows/ci.yml/badge.svg)](https://github.com/jmpei/slashsplit/actions/workflows/ci.yml)
+
 Split shared bills with roommates, item by item. Snap a receipt, slash the items someone didn’t share,
 and see who owes whom and the fewest transfers to settle up.
 
 CS6983 Project 2 (pair project). Plan, user stories, split rules and sprints: [`docs/PLAN.md`](docs/PLAN.md).
 Rules for AI agents and contributors: [`AGENTS.md`](AGENTS.md).
+
+**Production:** https://slashsplit.vercel.app (Vercel + Neon Postgres; every merge to `main` deploys).
 
 ## Features
 
@@ -45,6 +49,7 @@ npm run dev                     # http://localhost:3000
 | `npm run db:up` | Start local Postgres (Docker) |
 | `npm run db:migrate` | Create / apply migrations locally |
 | `npm run db:deploy` | Apply migrations in CI / production |
+| `npm run vercel-build` | Vercel's build: in production, apply migrations first, then `next build` |
 
 ## Environment variables
 
@@ -60,6 +65,7 @@ All names are in [`.env.example`](.env.example).
 | `BLOB_READ_WRITE_TOKEN` | Receipt image storage |
 | `CRON_SECRET` | Monthly rent job |
 | `E2E_BASE_URL`, `VERCEL_AUTOMATION_BYPASS_SECRET` | E2E against a preview deployment |
+| `DIRECT_URL` | Non-pooled database URL for migrations (production) |
 
 ## Project layout
 
