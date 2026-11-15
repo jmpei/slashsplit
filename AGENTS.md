@@ -26,7 +26,7 @@ npm run test:e2e                                 # Playwright E2E suite (port 31
 <invariants>
 ## 2. Non-Negotiable Guardrails (What Claude Cannot Guess)
 
-1. **Strict Red → Green TDD commits:** Every feature/fix branch requires a failing `test(<scope>): ... (#<n>)` commit **before** the `feat(<scope>): ... (#<n>)` implementation commit. Merge PRs with `--merge` (**never `--squash`**) so Red/Green history stays intact.
+1. **Strict Red → Green TDD commits:** Every feature/fix branch requires a failing `test(<scope>): ... (#<n>)` commit **before** the implementation commit: `feat(<scope>): ... (#<n>)` / `fix(...)`, or `chore(...)` / `ci(...)` for infrastructure. Merge PRs with `--merge` (**never `--squash`**) so Red/Green history stays intact.
 2. **All UI must follow [`DESIGN.md`](./DESIGN.md):** Read `DESIGN.md` (Vercel-inspired design system from `VoltAgent/awesome-design-md`) before editing any `.tsx` file. Use `Geist` / `Geist Mono`, `#171717` (`bg-zinc-900`) primary CTAs, `1px` hairline borders, and `tabular-nums` on every money figure.
 3. **Money is integer cents (`*Cents`):** Never use floats, `parseFloat`, or `toFixed` on money; use `allocate()` (Largest Remainder, `src/lib/split/allocate.ts`) and `formatCents()`.
 4. **Prisma 7 & layer boundary:** Import Prisma strictly from `@/generated/prisma/client` (never `@prisma/client`) and only inside `src/server/`. Route handlers in `src/app/api/v1/` only parse with `zod`, call `authorizeMember(request, householdId)` (`403` for non-members), and call `src/server/`.
@@ -42,6 +42,9 @@ Load these files when working in their respective areas:
 - **UI Design Tokens & Components:** [`DESIGN.md`](./DESIGN.md) & [`.claude/rules/ui-design.md`](./.claude/rules/ui-design.md) (`src/app/**/*.tsx`)
 - **Domain Math, API & Prisma Rules:** [`.claude/rules/api-and-domain.md`](./.claude/rules/api-and-domain.md) (`src/lib/**`, `src/server/**`, `src/app/api/**`)
 - **TDD, Git & PR Workflow:** [`.claude/rules/tdd-and-git.md`](./.claude/rules/tdd-and-git.md)
+- **Library docs:** Always use the Context7 MCP when you need library/API docs, code generation,
+  or setup and configuration steps, without being asked. Exception: Next.js — read
+  `node_modules/next/dist/docs/` (exact installed version; see the block below).
 </scoped_rules>
 
 <!-- BEGIN:nextjs-agent-rules -->
