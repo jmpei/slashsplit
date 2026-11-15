@@ -1,11 +1,12 @@
 // Expense service (#6): create, list, view, edit and delete expenses inside a household.
 // Computes shares through the pure split functions in src/lib/split/ and stores plain integer cents.
 import { prisma } from "@/lib/db";
-import type { ExpenseInput } from "@/lib/schemas/expenses";
+import type { DraftEdits, ExpenseInput } from "@/lib/schemas/expenses";
 import { splitByRatio, splitEqual, splitItemized, type Share } from "@/lib/split/split-expense";
 import { listMembers, NotFoundError } from "@/server/households";
 
 export class ValidationError extends Error {}
+export class ConflictError extends Error {}
 
 export type ExpenseRecord = {
   id: string;
@@ -200,11 +201,15 @@ export async function createExpense(
   return formatExpense(created, memberIds);
 }
 
-export async function listExpenses(householdId: string): Promise<ExpenseRecord[]> {
+// Confirmed expenses by default; drafts (#9, #10) are listed only when asked for.
+export async function listExpenses(
+  householdId: string,
+  status: "CONFIRMED" | "DRAFT" = "CONFIRMED",
+): Promise<ExpenseRecord[]> {
   const [members, rows] = await Promise.all([
     listMembers(householdId),
     prisma.expense.findMany({
-      where: { householdId },
+      where: { householdId, status },
       include: expenseInclude,
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     }),
@@ -299,21 +304,86 @@ export async function deleteExpense(householdId: string, expenseId: string): Pro
   await prisma.expense.delete({ where: { id: expenseId } });
 }
 
-export type DraftEdits = {
-  merchant?: string;
-  date?: string;
-  totalCents: number;
-  items: { name: string; priceCents: number; taxCodes: string[]; participantIds: string[] }[];
-  taxes: { code: string; amountCents: number }[];
-};
 
+// Confirms a DRAFT (#10): the edited receipt (or the stored draft) must have items and add up to
+// its total; then shares are computed, scanError is cleared and the status becomes CONFIRMED.
 export async function confirmExpense(
   householdId: string,
   expenseId: string,
   edits?: DraftEdits,
 ): Promise<ExpenseRecord> {
-  void householdId;
-  void expenseId;
-  void edits;
-  throw new Error("Not implemented.");
+  const existing = await prisma.expense.findFirst({
+    where: { id: expenseId, householdId },
+    include: expenseInclude,
+  });
+  if (!existing) throw new NotFoundError("Expense not found.");
+  if (existing.status === "CONFIRMED") throw new ConflictError("This expense is already confirmed.");
+
+  const memberIds = (await listMembers(householdId)).map((m) => m.userId);
+  const input: ExpenseInput = {
+    payerId: existing.payerId,
+    merchant: edits?.merchant ?? existing.merchant,
+    date: edits?.date ?? existing.date,
+    splitMode: "ITEMIZED",
+    totalCents: edits?.totalCents ?? existing.totalCents,
+    items:
+      edits?.items ??
+      existing.items.map((item) => ({
+        name: item.name,
+        priceCents: item.priceCents,
+        taxCodes: item.taxCodes,
+        participantIds: item.participants.map((p) => p.userId),
+      })),
+    taxes: edits?.taxes ?? existing.taxes.map((t) => ({ code: t.code, amountCents: t.amountCents })),
+    weights: [],
+  };
+  if (!input.merchant.trim()) throw new ValidationError("Enter the merchant name.");
+  const shares = computeSharesForInput(memberIds, input);
+
+  const confirmed = await prisma.$transaction(async (tx) => {
+    // Only a row that is still a DRAFT flips, so two confirms racing each other cannot both win.
+    const flipped = await tx.expense.updateMany({
+      where: { id: expenseId, status: "DRAFT" },
+      data: { status: "CONFIRMED", scanError: null },
+    });
+    if (flipped.count === 0) throw new ConflictError("This expense is already confirmed.");
+    if (edits) {
+      await tx.expenseItem.deleteMany({ where: { expenseId } });
+      await tx.expenseTax.deleteMany({ where: { expenseId } });
+    }
+    await tx.expenseShare.deleteMany({ where: { expenseId } });
+
+    return tx.expense.update({
+      where: { id: expenseId },
+      data: {
+        merchant: input.merchant,
+        date: input.date,
+        totalCents: input.totalCents,
+        ...(edits && {
+          items: {
+            create: input.items.map((item, idx) => ({
+              name: item.name,
+              priceCents: item.priceCents,
+              taxCodes: item.taxCodes,
+              sortOrder: idx,
+              participants: { create: item.participantIds.map((userId) => ({ userId })) },
+            })),
+          },
+          taxes: {
+            create: input.taxes.map((tax, idx) => ({
+              code: tax.code,
+              amountCents: tax.amountCents,
+              sortOrder: idx,
+            })),
+          },
+        }),
+        shares: {
+          create: shares.map((s) => ({ userId: s.userId, amountCents: s.amountCents })),
+        },
+      },
+      include: expenseInclude,
+    });
+  });
+
+  return formatExpense(confirmed, memberIds);
 }

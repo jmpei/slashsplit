@@ -11,6 +11,7 @@ export const forbidden = () =>
   Response.json({ error: "You’re not a member of this household." }, { status: 403 });
 export const notFound = (message: string) => Response.json({ error: message }, { status: 404 });
 export const badRequest = (message: string) => Response.json({ error: message }, { status: 400 });
+export const conflict = (message: string) => Response.json({ error: message }, { status: 409 });
 
 // A Bearer API token (#13) takes precedence over the session cookie; an unknown token is a 401.
 export async function currentUserId(request: Request): Promise<string | null> {

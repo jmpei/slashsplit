@@ -52,6 +52,15 @@ export const expenseBody = z.object({
 
 export type ExpenseInput = z.infer<typeof expenseBody>;
 
+// The reviewed receipt sent when confirming a draft (#10); it replaces the stored items and taxes.
+export const draftEditsBody = expenseBody
+  .pick({ merchant: true, date: true, totalCents: true, items: true, taxes: true })
+  .partial({ merchant: true, date: true });
+
+export type DraftEdits = z.infer<typeof draftEditsBody>;
+
+export const expenseStatusQuery = z.enum(["CONFIRMED", "DRAFT"]).default("CONFIRMED");
+
 // Builds YYYY-MM-DD in the caller's local timezone (AGENTS.md §1.6: never toISOString().slice(0, 10)).
 export function localCalendarDay(date: Date = new Date()): string {
   const year = date.getFullYear();

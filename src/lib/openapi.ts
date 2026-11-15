@@ -1,7 +1,7 @@
 // OpenAPI 3.1 specification builder (#8): converts our zod request and response schemas via Zod 4's
 // built-in z.toJSONSchema() so route validation and API documentation never drift.
 import { z } from "zod";
-import { expenseBody } from "@/lib/schemas/expenses";
+import { draftEditsBody, expenseBody } from "@/lib/schemas/expenses";
 import { createHouseholdBody, joinHouseholdBody } from "@/lib/schemas/households";
 import { recordSettlementBody } from "@/lib/schemas/settlements";
 import { createTokenBody } from "@/lib/schemas/tokens";
@@ -253,12 +253,25 @@ export function buildOpenApiSpec() {
       },
       "/api/v1/households/{id}/expenses": {
         get: {
-          summary: "List expenses in a household",
-          parameters: [idParam],
+          summary: "List confirmed expenses in a household, or its receipt drafts",
+          parameters: [
+            idParam,
+            {
+              name: "status",
+              in: "query",
+              required: false,
+              schema: { type: "string", enum: ["CONFIRMED", "DRAFT"], default: "CONFIRMED" },
+              description: "CONFIRMED (default) lists expenses; DRAFT lists scanned receipts awaiting confirmation.",
+            },
+          ],
           responses: {
             "200": {
               description: "Expenses with items, taxes and computed shares.",
               content: { "application/json": { schema: jsonSchema(z.array(expenseRecordSchema)) } },
+            },
+            "400": {
+              description: "Unknown status value.",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
             },
             ...authErrors,
           },
@@ -329,6 +342,37 @@ export function buildOpenApiSpec() {
             "204": { description: "Expense deleted." },
             "404": {
               description: "Expense not found.",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
+            },
+            ...authErrors,
+          },
+        },
+      },
+      "/api/v1/households/{id}/expenses/{eid}/confirm": {
+        post: {
+          summary: "Confirm a DRAFT expense and compute member shares",
+          description:
+            "Optionally send the reviewed receipt; it replaces the stored items and taxes. Items plus taxes must equal totalCents and there must be at least one item, otherwise the expense stays DRAFT.",
+          parameters: [idParam, eidParam],
+          requestBody: {
+            required: false,
+            content: { "application/json": { schema: jsonSchema(draftEditsBody) } },
+          },
+          responses: {
+            "200": {
+              description: "Confirmed expense with its shares.",
+              content: { "application/json": { schema: jsonSchema(expenseRecordSchema) } },
+            },
+            "400": {
+              description: "No items, or items plus taxes do not equal the total; the expense stays DRAFT.",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
+            },
+            "404": {
+              description: "Expense not found in this household.",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
+            },
+            "409": {
+              description: "The expense is already confirmed.",
               content: { "application/json": { schema: jsonSchema(errorSchema) } },
             },
             ...authErrors,
