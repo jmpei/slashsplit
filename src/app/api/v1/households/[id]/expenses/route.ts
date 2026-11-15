@@ -1,5 +1,5 @@
-// GET: expenses in a household. POST: record a new expense (#6). Members only.
-import { expenseBody } from "@/lib/schemas/expenses";
+// GET: confirmed expenses in a household, or drafts with ?status=DRAFT (#10). POST: record a new expense (#6). Members only.
+import { expenseBody, expenseStatusQuery } from "@/lib/schemas/expenses";
 import { authorizeMember, badRequest, parseBody } from "@/server/api";
 import { createExpense, listExpenses, ValidationError } from "@/server/expenses";
 
@@ -7,7 +7,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const caller = await authorizeMember(request, id);
   if (caller instanceof Response) return caller;
-  return Response.json(await listExpenses(id));
+  const status = expenseStatusQuery.safeParse(
+    new URL(request.url).searchParams.get("status") ?? undefined,
+  );
+  if (!status.success) return badRequest("status must be CONFIRMED or DRAFT.");
+  return Response.json(await listExpenses(id, status.data));
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {

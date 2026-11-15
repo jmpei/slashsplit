@@ -1,5 +1,6 @@
-// One household (#4, #6, #7): invite code, members in join order, net balances, greedy settlement
-// plan, expense entry form, and recorded expenses. Non-members get a 404 page.
+// One household (#4, #6, #7, #10): invite code, members in join order, net balances, greedy
+// settlement plan, receipt scanning and draft review, expense entry form, and confirmed
+// expenses. Non-members get a 404 page.
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -11,6 +12,7 @@ import { getHouseholdBalances } from "@/server/balances";
 import { listExpenses } from "@/server/expenses";
 import { getHousehold, isMember, listMembers } from "@/server/households";
 import { BalancesPanel } from "./balances-panel";
+import { DraftExpenses } from "./draft-expenses";
 import { ExpenseForm } from "./expense-form";
 
 const roleLabel = { OWNER: "Owner", MEMBER: "Member" } as const;
@@ -20,10 +22,11 @@ async function HouseholdContent({ params }: { params: Promise<{ id: string }> })
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
   if (!(await isMember(session.user.id, id))) notFound();
-  const [household, members, expenses, balances] = await Promise.all([
+  const [household, members, expenses, drafts, balances] = await Promise.all([
     getHousehold(id),
     listMembers(id),
     listExpenses(id),
+    listExpenses(id, "DRAFT"),
     getHouseholdBalances(id),
   ]);
   if (!household) notFound();
@@ -59,6 +62,8 @@ async function HouseholdContent({ params }: { params: Promise<{ id: string }> })
         balances={balances}
         transfers={transfers}
       />
+
+      <DraftExpenses householdId={id} members={members} drafts={drafts} />
 
       <ExpenseForm householdId={id} currentUserId={session.user.id} members={members} />
 
