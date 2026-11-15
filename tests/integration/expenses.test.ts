@@ -300,6 +300,51 @@ describe("recording and managing expenses", () => {
     );
     expect(res.status).toBe(400);
   });
+
+  test("rejects an item that lists the same participant twice", async () => {
+    const res = await createExpense(
+      request(`/api/v1/households/${houseId}/expenses`, ada, {
+        body: {
+          payerId: ada.userId,
+          merchant: "Double Tick",
+          date: "2026-11-08",
+          splitMode: "ITEMIZED",
+          totalCents: 300,
+          items: [
+            {
+              name: "Bread",
+              priceCents: 300,
+              taxCodes: [],
+              participantIds: [ada.userId, ada.userId, bo.userId],
+            },
+          ],
+          taxes: [],
+        },
+      }),
+      householdParams(houseId),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test("rejects a RATIO split that weights the same member twice", async () => {
+    const res = await createExpense(
+      request(`/api/v1/households/${houseId}/expenses`, ada, {
+        body: {
+          payerId: ada.userId,
+          merchant: "Double Weight",
+          date: "2026-11-08",
+          splitMode: "RATIO",
+          totalCents: 1000,
+          weights: [
+            { userId: ada.userId, weight: 1 },
+            { userId: ada.userId, weight: 2 },
+          ],
+        },
+      }),
+      householdParams(houseId),
+    );
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("expense route access rules", () => {
