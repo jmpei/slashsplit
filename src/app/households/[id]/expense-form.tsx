@@ -1,6 +1,6 @@
 "use client";
 // Expense entry form (#6): itemized by default (every member ticked on every item; untick to slash),
-// or click "Split equally" to divide the whole bill evenly.
+// or click "Split equally" to divide the whole bill evenly. Each item ticks the taxes it carries.
 import { useState, useTransition } from "react";
 import { formatCents, localCalendarDay, parseDollarsToCents } from "@/lib/schemas/expenses";
 import type { Member } from "@/server/households";
@@ -16,7 +16,7 @@ const buttonSecondary =
 type DraftItem = {
   name: string;
   priceDollars: string;
-  taxCodes: string[];
+  taxRows: number[]; // indexes into the tax rows, so renaming a tax code keeps the ticks
   participantIds: string[];
 };
 
@@ -37,7 +37,7 @@ export function ExpenseForm(props: {
   const [splitMode, setSplitMode] = useState<"ITEMIZED" | "EQUAL">("ITEMIZED");
   const [equalTotalDollars, setEqualTotalDollars] = useState("");
   const [items, setItems] = useState<DraftItem[]>(() => [
-    { name: "", priceDollars: "", taxCodes: [], participantIds: allMemberIds },
+    { name: "", priceDollars: "", taxRows: [], participantIds: allMemberIds },
   ]);
   const [taxes, setTaxes] = useState<DraftTax[]>([]);
   const [error, setError] = useState("");
@@ -52,7 +52,7 @@ export function ExpenseForm(props: {
   function addItem() {
     setItems((prev) => [
       ...prev,
-      { name: "", priceDollars: "", taxCodes: [], participantIds: allMemberIds },
+      { name: "", priceDollars: "", taxRows: [], participantIds: allMemberIds },
     ]);
   }
 
@@ -70,6 +70,19 @@ export function ExpenseForm(props: {
           participantIds: has
             ? item.participantIds.filter((id) => id !== userId)
             : [...item.participantIds, userId],
+        };
+      }),
+    );
+  }
+
+  function toggleTax(itemIndex: number, taxRow: number) {
+    setItems((prev) =>
+      prev.map((item, idx) => {
+        if (idx !== itemIndex) return item;
+        const has = item.taxRows.includes(taxRow);
+        return {
+          ...item,
+          taxRows: has ? item.taxRows.filter((r) => r !== taxRow) : [...item.taxRows, taxRow],
         };
       }),
     );
@@ -103,7 +116,7 @@ export function ExpenseForm(props: {
         setMerchant("");
         setEqualTotalDollars("");
         setSplitMode("ITEMIZED");
-        setItems([{ name: "", priceDollars: "", taxCodes: [], participantIds: allMemberIds }]);
+        setItems([{ name: "", priceDollars: "", taxRows: [], participantIds: allMemberIds }]);
       });
       return;
     }
@@ -120,10 +133,11 @@ export function ExpenseForm(props: {
         setError(`Enter a valid price for Item ${i + 1}.`);
         return;
       }
+      const taxCodes = items[i].taxRows.map((r) => taxes[r].code.trim()).filter(Boolean);
       parsedItems.push({
         name: items[i].name,
         priceCents,
-        taxCodes: items[i].taxCodes,
+        taxCodes: [...new Set(taxCodes)],
         participantIds: items[i].participantIds,
       });
     }
@@ -133,6 +147,10 @@ export function ExpenseForm(props: {
       const amountCents = parseDollarsToCents(taxes[i].amountDollars);
       if (amountCents === null || amountCents < 0) {
         setError(`Enter a valid amount for tax ${i + 1}.`);
+        return;
+      }
+      if (amountCents > 0 && !items.some((item) => item.taxRows.includes(i))) {
+        setError(`Tick the items that carry ${taxes[i].code.trim() || `tax ${i + 1}`}.`);
         return;
       }
       parsedTaxes.push({ code: taxes[i].code, amountCents });
@@ -158,7 +176,7 @@ export function ExpenseForm(props: {
         return;
       }
       setMerchant("");
-      setItems([{ name: "", priceDollars: "", taxCodes: [], participantIds: allMemberIds }]);
+      setItems([{ name: "", priceDollars: "", taxRows: [], participantIds: allMemberIds }]);
       setTaxes([]);
     });
   }
@@ -306,6 +324,31 @@ export function ExpenseForm(props: {
                     );
                   })}
                 </div>
+                {taxes.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-medium text-foreground/70">Taxes</span>
+                    {taxes.map((tax, taxRow) => {
+                      const checked = item.taxRows.includes(taxRow);
+                      return (
+                        <label
+                          key={taxRow}
+                          className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm ${
+                            checked
+                              ? "border-foreground/40 bg-foreground/5"
+                              : "border-foreground/15 text-foreground/50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleTax(idx, taxRow)}
+                          />
+                          {tax.code.trim() || `Tax ${taxRow + 1}`}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
               </fieldset>
             ))}
           </div>

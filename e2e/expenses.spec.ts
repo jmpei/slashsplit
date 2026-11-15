@@ -1,6 +1,6 @@
 // Itemized and equal expense E2E (#6): 3 roommates join a household, record the PLAN §5.3 receipt
 // (Milk $6.00 all 3, Beer $12.00 Cy unticked, Yogurt $3.00 only Cy -> shares $8.00 / $8.00 / $5.00),
-// and also test the "Split equally" button.
+// test the "Split equally" button, and record an item that carries a tax.
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
 async function signUp(browser: Browser, name: string, tag: string): Promise<Page> {
@@ -76,4 +76,47 @@ test("record the PLAN §5.3 itemized expense and a whole-bill equal split", asyn
   await form.getByRole("button", { name: "Save expense" }).click();
   await expect(list).toContainText("Internet");
   await expect(list).toContainText("Ada: $3.00");
+});
+
+test("an item can carry a tax, and the tax is split with that item", async ({ browser }, info) => {
+  const tag = `${info.project.name}-tax-${Date.now()}`;
+
+  const ada = await signUp(browser, "Ada", tag);
+  await ada.getByLabel("Household name").fill("Cedar House");
+  await ada.getByRole("button", { name: "Create household" }).click();
+  await expect(ada.getByRole("heading", { level: 1, name: "Cedar House" })).toBeVisible();
+  const inviteCode = (await ada.getByTestId("invite-code").textContent())!.trim();
+
+  const bo = await signUp(browser, "Bo", tag);
+  await bo.getByLabel("Invite code").fill(inviteCode);
+  await bo.getByRole("button", { name: "Join household" }).click();
+  await expect(bo.getByRole("heading", { level: 1, name: "Cedar House" })).toBeVisible();
+
+  await ada.reload();
+  const form = ada.getByRole("form", { name: "Record an expense" });
+  await form.getByLabel("Merchant").fill("Liquor Store");
+
+  // Milk $6.00 for both, untaxed. Beer $12.00 for Ada only, carries GST $0.90.
+  const item1 = form.getByRole("group", { name: "Item 1" });
+  await item1.getByLabel("Item name").fill("Milk");
+  await item1.getByLabel("Price ($)").fill("6.00");
+
+  await form.getByRole("button", { name: "Add item" }).click();
+  const item2 = form.getByRole("group", { name: "Item 2" });
+  await item2.getByLabel("Item name").fill("Beer");
+  await item2.getByLabel("Price ($)").fill("12.00");
+  await item2.getByRole("checkbox", { name: "Bo" }).uncheck();
+
+  await form.getByRole("button", { name: "Add tax" }).click();
+  await form.getByLabel("Tax ($)").fill("0.90");
+  await expect(item1.getByRole("checkbox", { name: "GST" })).not.toBeChecked();
+  await item2.getByRole("checkbox", { name: "GST" }).check();
+
+  await form.getByRole("button", { name: "Save expense" }).click();
+
+  const list = ada.getByRole("list", { name: "Expenses" });
+  await expect(list).toContainText("Liquor Store");
+  await expect(list).toContainText("$18.90");
+  await expect(list).toContainText("Ada: $15.90");
+  await expect(list).toContainText("Bo: $3.00");
 });

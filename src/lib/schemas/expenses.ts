@@ -2,6 +2,11 @@
 // server actions, and OpenAPI generation (#8). All amounts are integer cents.
 import { z } from "zod";
 
+// A repeated id would charge that person twice (participants) or break a unique key (weights).
+function isUnique(ids: string[]): boolean {
+  return new Set(ids).size === ids.length;
+}
+
 const calendarDay = z
   .string()
   .trim()
@@ -11,7 +16,10 @@ export const expenseItemSchema = z.object({
   name: z.string().trim().min(1, "Give every item a name.").max(100),
   priceCents: z.number().int("Item prices must be whole cents."),
   taxCodes: z.array(z.string().trim().min(1)).default([]),
-  participantIds: z.array(z.string().trim().min(1)).min(1, "Tick at least one person per item."),
+  participantIds: z
+    .array(z.string().trim().min(1))
+    .min(1, "Tick at least one person per item.")
+    .refine(isUnique, "Tick each person at most once per item."),
 });
 
 export const expenseTaxSchema = z.object({
@@ -36,7 +44,10 @@ export const expenseBody = z.object({
   totalCents: z.number().int("Total must be whole cents."),
   items: z.array(expenseItemSchema).default([]),
   taxes: z.array(expenseTaxSchema).default([]),
-  weights: z.array(expenseWeightSchema).default([]),
+  weights: z
+    .array(expenseWeightSchema)
+    .default([])
+    .refine((weights) => isUnique(weights.map((w) => w.userId)), "Give each person one weight."),
 });
 
 export type ExpenseInput = z.infer<typeof expenseBody>;
