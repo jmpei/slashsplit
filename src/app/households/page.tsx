@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { auth } from "@/server/auth";
 import { listHouseholds } from "@/server/households";
+import { bodyText, buttonSecondary } from "../ui";
 import { HouseholdForms } from "./household-forms";
 import { SignOutButton } from "./sign-out-button";
 
@@ -15,26 +16,23 @@ async function HouseholdsContent() {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <p>Signed in as {session.user.name}</p>
-        <div className="flex gap-2">
-          <Link
-            href="/settings/tokens"
-            className="flex min-h-11 items-center rounded-lg border border-foreground/20 px-4 font-medium"
-          >
+        <p className={bodyText}>Signed in as {session.user.name}</p>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/settings/tokens" className={`${buttonSecondary} flex items-center`}>
             API tokens
           </Link>
           <SignOutButton />
         </div>
       </div>
       {households.length === 0 ? (
-        <p className="text-foreground/70">You’re not in a household yet. Create one or join with a code.</p>
+        <p className={bodyText}>You’re not in a household yet. Create one or join with a code.</p>
       ) : (
         <ul aria-label="Your households" className="flex flex-col gap-2">
           {households.map((h) => (
             <li key={h.id}>
               <Link
                 href={`/households/${h.id}`}
-                className="flex min-h-11 items-center rounded-lg border border-foreground/15 px-4 font-medium"
+                className="flex min-h-11 items-center rounded-xl border border-zinc-200 bg-white px-4 font-medium break-words hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
               >
                 {h.name}
               </Link>
@@ -49,9 +47,9 @@ async function HouseholdsContent() {
 
 export default function HouseholdsPage() {
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 px-4 py-10">
-      <h1 className="text-3xl font-semibold tracking-tight">Households</h1>
-      <Suspense fallback={<p className="text-foreground/60">Loading…</p>}>
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Households</h1>
+      <Suspense fallback={<p className={bodyText}>Loading…</p>}>
         <HouseholdsContent />
       </Suspense>
     </main>

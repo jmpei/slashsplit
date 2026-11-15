@@ -1,31 +1,37 @@
 "use client";
 // Create-a-token form that shows the new plaintext token once, and a revoke button that asks for
-// confirmation first (#13).
-import { useActionState, useState } from "react";
+// confirmation first (#13). Escape cancels the confirmation; failures are announced in status regions.
+import { unstable_rethrow } from "next/navigation";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { buttonPrimary, buttonSecondary, errorText, field, label, NETWORK_ERROR } from "../../ui";
 import { createTokenAction, revokeTokenAction, type CreateTokenState } from "./actions";
 
-const field =
-  "min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-base outline-none focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-950";
-const primary =
-  "min-h-11 rounded-lg bg-zinc-900 px-4 font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900";
-const secondary =
-  "min-h-11 rounded-lg border border-zinc-200 bg-white px-4 font-medium dark:border-zinc-800 dark:bg-zinc-900";
 const initial: CreateTokenState = { error: "" };
 
 export function CreateTokenForm() {
-  const [state, formAction, pending] = useActionState(createTokenAction, initial);
+  const [state, formAction, pending] = useActionState(
+    async (prev: CreateTokenState, form: FormData): Promise<CreateTokenState> => {
+      try {
+        return await createTokenAction(prev, form);
+      } catch (error) {
+        unstable_rethrow(error);
+        return { error: NETWORK_ERROR };
+      }
+    },
+    initial,
+  );
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex flex-col gap-4">
       <form action={formAction} aria-label="Create a token" className="flex flex-col gap-2">
-        <label className="flex flex-col gap-1 text-sm">
+        <label className={label}>
           Token name
           <input name="name" required maxLength={60} className={field} placeholder="Laptop script" />
         </label>
-        <button type="submit" className={primary} disabled={pending}>
+        <button type="submit" className={buttonPrimary} disabled={pending}>
           Create token
         </button>
-        <p role="status" className="min-h-5 text-sm text-red-700 dark:text-red-400">
+        <p role="status" aria-live="polite" className={errorText}>
           {state.error}
         </p>
       </form>
@@ -43,7 +49,7 @@ export function CreateTokenForm() {
           </p>
           <button
             type="button"
-            className={secondary}
+            className={buttonSecondary}
             onClick={async () => {
               await navigator.clipboard.writeText(state.token!);
               setCopied(true);
@@ -60,11 +66,48 @@ export function CreateTokenForm() {
 export function RevokeTokenButton({ id, name }: { id: string; name: string }) {
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const revokeRef = useRef<HTMLButtonElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const wasConfirming = useRef(false);
+
+  // Keep keyboard focus in place: on Cancel when the confirmation opens, back on Revoke when it closes.
+  useEffect(() => {
+    if (confirming) cancelRef.current?.focus();
+    else if (wasConfirming.current) revokeRef.current?.focus();
+    wasConfirming.current = confirming;
+  }, [confirming]);
+
+  useEffect(() => {
+    if (!confirming) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setConfirming(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [confirming]);
+
   if (!confirming) {
     return (
-      <button type="button" aria-label={`Revoke ${name}`} className={secondary} onClick={() => setConfirming(true)}>
-        Revoke
-      </button>
+      <div className="flex flex-col items-start gap-1">
+        <button
+          ref={revokeRef}
+          type="button"
+          aria-label={`Revoke ${name}`}
+          className={buttonSecondary}
+          onClick={() => {
+            setError("");
+            setConfirming(true);
+          }}
+        >
+          Revoke
+        </button>
+        {error && (
+          <p role="status" aria-live="polite" className={errorText}>
+            {error}
+          </p>
+        )}
+      </div>
     );
   }
   return (
@@ -73,15 +116,22 @@ export function RevokeTokenButton({ id, name }: { id: string; name: string }) {
       <button
         type="button"
         disabled={pending}
-        className="min-h-11 rounded-lg border border-red-200 bg-red-50 px-4 font-medium text-red-700 disabled:opacity-50 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400"
+        className="min-h-11 rounded-md border border-red-200 bg-red-50 px-4 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950"
         onClick={async () => {
           setPending(true);
-          await revokeTokenAction(id);
+          try {
+            await revokeTokenAction(id);
+          } catch (err) {
+            unstable_rethrow(err);
+            setPending(false);
+            setError(NETWORK_ERROR);
+            setConfirming(false);
+          }
         }}
       >
         Yes, revoke
       </button>
-      <button type="button" className={secondary} onClick={() => setConfirming(false)}>
+      <button ref={cancelRef} type="button" className={buttonSecondary} onClick={() => setConfirming(false)}>
         Cancel
       </button>
     </div>

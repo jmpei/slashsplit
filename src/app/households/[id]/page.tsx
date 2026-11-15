@@ -11,6 +11,7 @@ import { auth } from "@/server/auth";
 import { getHouseholdBalances } from "@/server/balances";
 import { listExpenses } from "@/server/expenses";
 import { getHousehold, isMember, listMembers } from "@/server/households";
+import { bodyText, card, h2 } from "../../ui";
 import { BalancesPanel } from "./balances-panel";
 import { DraftExpenses } from "./draft-expenses";
 import { ExpenseForm } from "./expense-form";
@@ -38,21 +39,21 @@ async function HouseholdContent({ params }: { params: Promise<{ id: string }> })
   return (
     <>
       <HouseholdLiveUpdates householdId={id} version={household.version} />
-      <h1 className="text-3xl font-semibold tracking-tight">{household.name}</h1>
-      <section className="flex flex-col gap-1">
-        <h2 className="text-sm text-foreground/70">Invite code</h2>
-        <code data-testid="invite-code" className="font-mono text-2xl tracking-widest">
-          {household.inviteCode}
-        </code>
-        <p className="text-sm text-foreground/70">Share it with roommates so they can join.</p>
-      </section>
-      <section className="flex flex-col gap-2">
-        <h2 className="font-medium">Members</h2>
-        <ul aria-label="Members" className="flex flex-col divide-y divide-foreground/10">
+      <h1 className="text-2xl font-semibold tracking-tight break-words">{household.name}</h1>
+      <section className={card}>
+        <div className="flex flex-col gap-1">
+          <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Invite code</h2>
+          <code data-testid="invite-code" className="font-mono text-2xl tracking-widest">
+            {household.inviteCode}
+          </code>
+          <p className={bodyText}>Share it with roommates so they can join.</p>
+        </div>
+        <h2 className={h2}>Members</h2>
+        <ul aria-label="Members" className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
           {members.map((m) => (
             <li key={m.userId} className="flex min-h-11 items-center justify-between gap-4">
-              <span>{m.name}</span>
-              <span className="text-sm text-foreground/70">{roleLabel[m.role]}</span>
+              <span className="min-w-0 break-words">{m.name}</span>
+              <span className={bodyText}>{roleLabel[m.role]}</span>
             </li>
           ))}
         </ul>
@@ -69,22 +70,22 @@ async function HouseholdContent({ params }: { params: Promise<{ id: string }> })
 
       <ExpenseForm householdId={id} currentUserId={session.user.id} members={members} />
 
-      <section className="flex flex-col gap-2">
-        <h2 className="font-medium">Expenses</h2>
+      <section className={card}>
+        <h2 className={h2}>Expenses</h2>
         {expenses.length === 0 ? (
-          <p className="text-sm text-foreground/70">No expenses recorded yet.</p>
+          <p className={bodyText}>No expenses recorded yet.</p>
         ) : (
-          <ul aria-label="Expenses" className="flex flex-col divide-y divide-foreground/10">
+          <ul aria-label="Expenses" className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800">
             {expenses.map((expense) => (
               <li key={expense.id} className="flex flex-col gap-1 py-3">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="font-medium">{expense.merchant}</span>
-                  <span className="font-mono">{formatCents(expense.totalCents)}</span>
+                  <span className="min-w-0 break-words font-medium">{expense.merchant}</span>
+                  <span className="font-semibold tabular-nums">{formatCents(expense.totalCents)}</span>
                 </div>
-                <p className="text-xs text-foreground/70">
+                <p className="text-xs text-zinc-600 dark:text-zinc-400">
                   Paid by {nameById.get(expense.payerId) ?? "Member"} on {expense.date}
                 </p>
-                <p className="text-sm text-foreground/80">
+                <p className="text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
                   {expense.shares
                     .map((s) => `${nameById.get(s.userId) ?? s.userId}: ${formatCents(s.amountCents)}`)
                     .join(" · ")}
@@ -100,11 +101,14 @@ async function HouseholdContent({ params }: { params: Promise<{ id: string }> })
 
 export default function HouseholdPage({ params }: PageProps<"/households/[id]">) {
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 px-4 py-10">
-      <Link href="/households" className="text-sm text-foreground/70 underline">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6">
+      <Link
+        href="/households"
+        className="w-fit text-sm text-zinc-600 underline underline-offset-4 dark:text-zinc-400"
+      >
         All households
       </Link>
-      <Suspense fallback={<p className="text-foreground/60">Loading…</p>}>
+      <Suspense fallback={<p className={bodyText}>Loading…</p>}>
         <HouseholdContent params={params} />
       </Suspense>
     </main>

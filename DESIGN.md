@@ -259,7 +259,7 @@ SlashSplit adopts the **Vercel design system** from [`VoltAgent/awesome-design-m
 | `{colors.hairline}` | `#ebebeb` | `border-zinc-200 dark:border-zinc-800` | 1px card borders, table dividers, form input borders |
 | `{colors.ink}` | `#171717` | `text-zinc-900 dark:text-zinc-100` | Primary headings, item names, dollar totals |
 | `{colors.body}` | `#4d4d4d` | `text-zinc-600 dark:text-zinc-400` | Secondary labels, dates, payer subtitles |
-| `{colors.mute}` | `#888888` | `text-zinc-400 dark:text-zinc-500` | Slashed (excluded) roommate chips, placeholders |
+| `{colors.mute}` | `#888888` | `text-zinc-400 dark:text-zinc-500` | Placeholders only (below 4.5:1, so never for text people must read) |
 | `{colors.primary}` | `#171717` | `bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900` | Primary buttons, active split-mode tabs, ticked member chips |
 | `{colors.success}` | `#059669` | `text-emerald-700 dark:text-emerald-400` | Positive net balance (`+$20.00`) |
 | `{colors.error}` | `#ee0000` | `text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950/40` | Negative net balance (`-$15.00`), receipt draft mismatch alert, form validation errors |
@@ -297,7 +297,7 @@ SlashSplit adopts the **Vercel design system** from [`VoltAgent/awesome-design-m
 2. **Roommate Slash Chip (`member-slash-chip-active` / `member-slash-chip-slashed`)**:
    - Pill toggle (`rounded-full px-3 py-1 text-xs font-medium`) with `aria-pressed={included}` inside each receipt item's ` Shared by` fieldset.
    - **Included**: `bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900`.
-   - **Slashed (Excluded)**: `border border-zinc-300 bg-white text-zinc-400 line-through dark:border-zinc-700 dark:bg-zinc-900`.
+   - **Slashed (Excluded)**: `border border-zinc-300 bg-white text-zinc-500 line-through dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400` (zinc-500 keeps the name at 4.5:1).
 3. **Balances & Settlement Row (`balance-badge-positive` / `balance-badge-negative`)**:
    - Net balances list each member with `tabular-nums`: positive (`+$20.00`) in emerald, negative (`-$15.00`) in red, settled (`$0.00`) in muted zinc.
    - Suggested transfers render inside a soft inset row (`bg-zinc-50 dark:bg-zinc-950`) with a right-aligned `Mark paid` button.
@@ -314,6 +314,8 @@ SlashSplit adopts the **Vercel design system** from [`VoltAgent/awesome-design-m
 - Use `1px` hairline borders (`border-zinc-200 dark:border-zinc-800`) to define cards, inputs, and list items.
 - Announce validation errors, draft mismatches, and status updates inside `role="status"` / `aria-live="polite"` containers.
 - Keep all interactive controls native (`<button>`, `<input>`, `<select>`, `<a>`) with explicit accessible labels.
+- Keep the global `:focus-visible` ring from `globals.css` (2px `zinc-900`, `zinc-100` in dark); never add `outline-none` to a control.
+- Give every hover state a dark variant (`hover:bg-zinc-800 dark:hover:bg-zinc-200` on primary buttons) so hovered text keeps its contrast.
 
 ### Don't
 - Don't introduce arbitrary rainbow accent colors or heavy drop-shadows (`shadow-xl`, `shadow-2xl`).
