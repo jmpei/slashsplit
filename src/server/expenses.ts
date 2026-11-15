@@ -298,3 +298,22 @@ export async function deleteExpense(householdId: string, expenseId: string): Pro
   if (!existing) throw new NotFoundError("Expense not found.");
   await prisma.expense.delete({ where: { id: expenseId } });
 }
+
+export type DraftEdits = {
+  merchant?: string;
+  date?: string;
+  totalCents: number;
+  items: { name: string; priceCents: number; taxCodes: string[]; participantIds: string[] }[];
+  taxes: { code: string; amountCents: number }[];
+};
+
+export async function confirmExpense(
+  householdId: string,
+  expenseId: string,
+  edits?: DraftEdits,
+): Promise<ExpenseRecord> {
+  void householdId;
+  void expenseId;
+  void edits;
+  throw new Error("Not implemented.");
+}

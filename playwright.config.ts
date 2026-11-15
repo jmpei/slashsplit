@@ -22,7 +22,14 @@ export default defineConfig({
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
+  // The local server scans receipts with the mismatch fixture, never Gemini (#10). It is never
+  // reused, so a dev server already on this port without the variable cannot serve the tests.
   webServer: process.env.E2E_BASE_URL
     ? undefined
-    : { command: `npm run dev -- --port ${port}`, url: baseURL, reuseExistingServer: !process.env.CI },
+    : {
+        command: `npm run dev -- --port ${port}`,
+        url: baseURL,
+        reuseExistingServer: false,
+        env: { RECEIPT_EXTRACTOR: "fixture:mismatch" },
+      },
 });
