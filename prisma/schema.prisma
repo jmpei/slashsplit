@@ -84,6 +84,8 @@ model Household {
   name        String
   inviteCode  String       @unique
   createdAt   DateTime     @default(now())
+  // Bumped with every balance-changing write (#11); clients poll it to know when to refresh.
+  version     Int          @default(0)
   memberships Membership[]
   expenses    Expense[]
   settlements Settlement[]

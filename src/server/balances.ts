@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db";
 import type { RecordSettlementInput } from "@/lib/schemas/settlements";
 import { computeBalances, planSettlement, type Balance, type Transfer } from "@/lib/split/balances";
 import { ValidationError } from "@/server/expenses";
-import { listMembers } from "@/server/households";
+import { bumpHouseholdVersion, listMembers } from "@/server/households";
+import { notifyHouseholdUpdated } from "@/server/realtime";
 
 export type SettlementRecord = {
   id: string;
@@ -61,14 +62,19 @@ export async function recordSettlement(
     throw new ValidationError("Both members of a settlement must belong to this household.");
   }
 
-  const created = await prisma.settlement.create({
-    data: {
-      householdId,
-      fromUserId: input.fromUserId,
-      toUserId: input.toUserId,
-      amountCents: input.amountCents,
-    },
+  const created = await prisma.$transaction(async (tx) => {
+    const row = await tx.settlement.create({
+      data: {
+        householdId,
+        fromUserId: input.fromUserId,
+        toUserId: input.toUserId,
+        amountCents: input.amountCents,
+      },
+    });
+    await bumpHouseholdVersion(tx, householdId);
+    return row;
   });
+  await notifyHouseholdUpdated(householdId);
 
   return {
     id: created.id,

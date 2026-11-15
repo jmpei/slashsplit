@@ -39,6 +39,8 @@ const expenseRecordSchema = expenseBody.extend({
   scanError: z.string().nullable().describe("Why the receipt scan failed; set only on such drafts (#9)."),
   shares: z.array(shareSchema),
 });
+const householdVersionSchema = z.object({ version: z.number().int().nonnegative() });
+
 const balanceSchema = z.object({
   userId: z.string(),
   netCents: z.number().int(),
@@ -419,6 +421,21 @@ export function buildOpenApiSpec() {
             "200": {
               description: "Net balances in member join order.",
               content: { "application/json": { schema: jsonSchema(z.array(balanceSchema)) } },
+            },
+            ...authErrors,
+          },
+        },
+      },
+      "/api/v1/households/{id}/version": {
+        get: {
+          summary: "Get the household's change counter for real-time polling",
+          description:
+            "Increases with every expense create, edit, delete or confirm and every recorded settlement. Clients without Pusher poll it every 2 seconds and refresh when it changes.",
+          parameters: [idParam],
+          responses: {
+            "200": {
+              description: "Current change counter.",
+              content: { "application/json": { schema: jsonSchema(householdVersionSchema) } },
             },
             ...authErrors,
           },
