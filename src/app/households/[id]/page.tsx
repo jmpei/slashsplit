@@ -1,6 +1,6 @@
-// One household (#4, #6, #7, #10): invite code, members in join order, net balances, greedy
+// One household (#4, #6, #7, #10, #11): invite code, members in join order, net balances, greedy
 // settlement plan, receipt scanning and draft review, expense entry form, and confirmed
-// expenses. Non-members get a 404 page.
+// expenses, refreshed live when another member changes them. Non-members get a 404 page.
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -14,6 +14,7 @@ import { getHousehold, isMember, listMembers } from "@/server/households";
 import { BalancesPanel } from "./balances-panel";
 import { DraftExpenses } from "./draft-expenses";
 import { ExpenseForm } from "./expense-form";
+import { HouseholdLiveUpdates } from "./household-live-updates";
 
 const roleLabel = { OWNER: "Owner", MEMBER: "Member" } as const;
 
@@ -36,6 +37,7 @@ async function HouseholdContent({ params }: { params: Promise<{ id: string }> })
 
   return (
     <>
+      <HouseholdLiveUpdates householdId={id} version={household.version} />
       <h1 className="text-3xl font-semibold tracking-tight">{household.name}</h1>
       <section className="flex flex-col gap-1">
         <h2 className="text-sm text-foreground/70">Invite code</h2>

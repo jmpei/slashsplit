@@ -3,7 +3,8 @@
 import { prisma } from "@/lib/db";
 import type { DraftEdits, ExpenseInput } from "@/lib/schemas/expenses";
 import { splitByRatio, splitEqual, splitItemized, type Share } from "@/lib/split/split-expense";
-import { listMembers, NotFoundError } from "@/server/households";
+import { bumpHouseholdVersion, listMembers, NotFoundError } from "@/server/households";
+import { notifyHouseholdUpdated } from "@/server/realtime";
 
 export class ValidationError extends Error {}
 export class ConflictError extends Error {}
@@ -155,49 +156,54 @@ export async function createExpense(
   const memberIds = members.map((m) => m.userId);
   const shares = computeSharesForInput(memberIds, input);
 
-  const created = await prisma.expense.create({
-    data: {
-      householdId,
-      payerId: input.payerId,
-      merchant: input.merchant,
-      date: input.date,
-      totalCents: input.totalCents,
-      splitMode: input.splitMode,
-      status: "CONFIRMED",
-      items: {
-        create: input.items.map((item, idx) => ({
-          name: item.name,
-          priceCents: item.priceCents,
-          taxCodes: item.taxCodes,
-          sortOrder: idx,
-          participants: {
-            create: item.participantIds.map((userId) => ({ userId })),
-          },
-        })),
+  const created = await prisma.$transaction(async (tx) => {
+    const row = await tx.expense.create({
+      data: {
+        householdId,
+        payerId: input.payerId,
+        merchant: input.merchant,
+        date: input.date,
+        totalCents: input.totalCents,
+        splitMode: input.splitMode,
+        status: "CONFIRMED",
+        items: {
+          create: input.items.map((item, idx) => ({
+            name: item.name,
+            priceCents: item.priceCents,
+            taxCodes: item.taxCodes,
+            sortOrder: idx,
+            participants: {
+              create: item.participantIds.map((userId) => ({ userId })),
+            },
+          })),
+        },
+        taxes: {
+          create: input.taxes.map((tax, idx) => ({
+            code: tax.code,
+            amountCents: tax.amountCents,
+            sortOrder: idx,
+          })),
+        },
+        weights: {
+          create: input.weights.map((w) => ({
+            userId: w.userId,
+            weight: w.weight,
+          })),
+        },
+        shares: {
+          create: shares.map((s) => ({
+            userId: s.userId,
+            amountCents: s.amountCents,
+          })),
+        },
       },
-      taxes: {
-        create: input.taxes.map((tax, idx) => ({
-          code: tax.code,
-          amountCents: tax.amountCents,
-          sortOrder: idx,
-        })),
-      },
-      weights: {
-        create: input.weights.map((w) => ({
-          userId: w.userId,
-          weight: w.weight,
-        })),
-      },
-      shares: {
-        create: shares.map((s) => ({
-          userId: s.userId,
-          amountCents: s.amountCents,
-        })),
-      },
-    },
-    include: expenseInclude,
+      include: expenseInclude,
+    });
+    await bumpHouseholdVersion(tx, householdId);
+    return row;
   });
 
+  await notifyHouseholdUpdated(householdId);
   return formatExpense(created, memberIds);
 }
 
@@ -249,6 +255,7 @@ export async function updateExpense(
     await tx.expenseTax.deleteMany({ where: { expenseId } });
     await tx.expenseWeight.deleteMany({ where: { expenseId } });
     await tx.expenseShare.deleteMany({ where: { expenseId } });
+    await bumpHouseholdVersion(tx, householdId);
 
     return tx.expense.update({
       where: { id: expenseId },
@@ -293,6 +300,7 @@ export async function updateExpense(
     });
   });
 
+  await notifyHouseholdUpdated(householdId);
   return formatExpense(updated, memberIds);
 }
 
@@ -301,7 +309,11 @@ export async function deleteExpense(householdId: string, expenseId: string): Pro
     where: { id: expenseId, householdId },
   });
   if (!existing) throw new NotFoundError("Expense not found.");
-  await prisma.expense.delete({ where: { id: expenseId } });
+  await prisma.$transaction(async (tx) => {
+    await tx.expense.delete({ where: { id: expenseId } });
+    await bumpHouseholdVersion(tx, householdId);
+  });
+  await notifyHouseholdUpdated(householdId);
 }
 
 
@@ -352,6 +364,7 @@ export async function confirmExpense(
       await tx.expenseTax.deleteMany({ where: { expenseId } });
     }
     await tx.expenseShare.deleteMany({ where: { expenseId } });
+    await bumpHouseholdVersion(tx, householdId);
 
     return tx.expense.update({
       where: { id: expenseId },
@@ -385,5 +398,6 @@ export async function confirmExpense(
     });
   });
 
+  await notifyHouseholdUpdated(householdId);
   return formatExpense(confirmed, memberIds);
 }

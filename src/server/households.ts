@@ -80,9 +80,33 @@ export async function isMember(userId: string, householdId: string): Promise<boo
 
 export async function getHousehold(
   householdId: string,
-): Promise<{ id: string; name: string; inviteCode: string } | null> {
+): Promise<{ id: string; name: string; inviteCode: string; version: number } | null> {
   const household = await prisma.household.findUnique({ where: { id: householdId } });
-  return household && { id: household.id, name: household.name, inviteCode: household.inviteCode };
+  return (
+    household && {
+      id: household.id,
+      name: household.name,
+      inviteCode: household.inviteCode,
+      version: household.version,
+    }
+  );
+}
+
+// Change counter for real-time polling (#11). Callers bump it inside the transaction that changes
+// balances, so a client never sees the new version before the new data.
+export async function bumpHouseholdVersion(
+  tx: Prisma.TransactionClient,
+  householdId: string,
+): Promise<void> {
+  await tx.household.update({ where: { id: householdId }, data: { version: { increment: 1 } } });
+}
+
+export async function getHouseholdVersion(householdId: string): Promise<number | null> {
+  const household = await prisma.household.findUnique({
+    where: { id: householdId },
+    select: { version: true },
+  });
+  return household?.version ?? null;
 }
 
 export async function listMembers(householdId: string): Promise<Member[]> {
