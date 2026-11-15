@@ -54,11 +54,12 @@ npm run dev                     # http://localhost:3000
 | `npm run db:up` | Start local Postgres (Docker) |
 | `npm run db:migrate` | Create / apply migrations locally |
 | `npm run db:deploy` | Apply migrations in CI / production |
-| `npm run vercel-build` | Vercel's build: in production, apply migrations first, then `next build` |
+| `npm run vercel-build` | Vercel's build: apply migrations (production, and previews on their own Neon branch), then `next build` |
 
 ## Environment variables
 
-All names are in [`.env.example`](.env.example).
+All names are in [`.env.example`](.env.example). Where each is set per environment (local, CI,
+preview, production): [`docs/setup.md`](docs/setup.md).
 
 | Variable | Used for |
 |---|---|
