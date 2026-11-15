@@ -170,7 +170,7 @@ export async function createExpense(
           taxCodes: item.taxCodes,
           sortOrder: idx,
           participants: {
-            create: [...new Set(item.participantIds)].map((userId) => ({ userId })),
+            create: item.participantIds.map((userId) => ({ userId })),
           },
         })),
       },
@@ -260,7 +260,7 @@ export async function updateExpense(
             taxCodes: item.taxCodes,
             sortOrder: idx,
             participants: {
-              create: [...new Set(item.participantIds)].map((userId) => ({ userId })),
+              create: item.participantIds.map((userId) => ({ userId })),
             },
           })),
         },
