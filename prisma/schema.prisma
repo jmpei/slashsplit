@@ -24,10 +24,12 @@ model User {
   sessions      Session[]
   accounts      Account[]
   memberships   Membership[]
-  paidExpenses  Expense[]         @relation("ExpensePayer")
-  itemParts     ItemParticipant[]
+  paidExpenses   Expense[]         @relation("ExpensePayer")
+  itemParts      ItemParticipant[]
   expenseWeights ExpenseWeight[]
-  expenseShares ExpenseShare[]
+  expenseShares  ExpenseShare[]
+  sentSettlements     Settlement[] @relation("SettlementFrom")
+  receivedSettlements Settlement[] @relation("SettlementTo")
 }
 
 model Session {
@@ -83,6 +85,7 @@ model Household {
   createdAt   DateTime     @default(now())
   memberships Membership[]
   expenses    Expense[]
+  settlements Settlement[]
 }
 
 enum Role {
@@ -187,4 +190,19 @@ model ExpenseShare {
   user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([expenseId, userId])
+}
+
+// A recorded transfer between two household members (#7).
+model Settlement {
+  id          String    @id @default(cuid())
+  householdId String
+  fromUserId  String
+  toUserId    String
+  amountCents Int
+  paidAt      DateTime  @default(now())
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  fromUser    User      @relation("SettlementFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser      User      @relation("SettlementTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
 }
