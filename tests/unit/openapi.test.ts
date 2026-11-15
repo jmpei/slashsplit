@@ -54,6 +54,34 @@ describe("/api/openapi.json", () => {
     });
   });
 
+  test.each(["/api/v1/tokens", "/api/v1/households"])(
+    "POST %s documents a Bearer token request example (#13)",
+    async (routePath) => {
+      const doc = await (await getOpenApi()).json();
+      const operation = doc.paths?.[routePath]?.post;
+      expect(operation, `Missing POST ${routePath}`).toBeDefined();
+
+      const examples = operation?.requestBody?.content?.["application/json"]?.examples ?? {};
+      expect(Object.keys(examples).length).toBeGreaterThan(0);
+      for (const example of Object.values(examples) as { value?: unknown }[]) {
+        expect(example.value).toBeDefined();
+      }
+
+      const samples: { source?: string }[] = operation?.["x-codeSamples"] ?? [];
+      expect(samples.map((s) => s.source).join("\n")).toMatch(
+        /curl[\s\S]*-H "Authorization: Bearer ss_[^"]*"/,
+      );
+    },
+  );
+
+  test("token routes are documented with bearerAuth", async () => {
+    const doc = await (await getOpenApi()).json();
+    expect(doc.paths?.["/api/v1/tokens"]?.get).toBeDefined();
+    expect(doc.paths?.["/api/v1/tokens"]?.post).toBeDefined();
+    expect(doc.paths?.["/api/v1/tokens/{id}"]?.delete).toBeDefined();
+    expect(doc.security).toEqual([{ bearerAuth: [] }]);
+  });
+
   test("every /api/v1 route and HTTP method on disk is documented in paths", async () => {
     const res = await getOpenApi();
     expect(res.status).toBe(200);

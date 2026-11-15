@@ -14,9 +14,17 @@ async function HouseholdsContent() {
   const households = await listHouseholds(session.user.id);
   return (
     <>
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <p>Signed in as {session.user.name}</p>
-        <SignOutButton />
+        <div className="flex gap-2">
+          <Link
+            href="/settings/tokens"
+            className="flex min-h-11 items-center rounded-lg border border-foreground/20 px-4 font-medium"
+          >
+            API tokens
+          </Link>
+          <SignOutButton />
+        </div>
       </div>
       {households.length === 0 ? (
         <p className="text-foreground/70">You’re not in a household yet. Create one or join with a code.</p>

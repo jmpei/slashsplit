@@ -3,6 +3,7 @@
 import type { z } from "zod";
 import { auth } from "@/server/auth";
 import { isMember } from "@/server/households";
+import { userIdForToken } from "@/server/tokens";
 
 export const unauthorized = () => Response.json({ error: "Sign in first." }, { status: 401 });
 // A household that doesn't exist also answers 403, so callers can't probe which ids exist.
@@ -11,7 +12,12 @@ export const forbidden = () =>
 export const notFound = (message: string) => Response.json({ error: message }, { status: 404 });
 export const badRequest = (message: string) => Response.json({ error: message }, { status: 400 });
 
+// A Bearer API token (#13) takes precedence over the session cookie; an unknown token is a 401.
 export async function currentUserId(request: Request): Promise<string | null> {
+  const authorization = request.headers.get("authorization");
+  if (authorization?.startsWith("Bearer ")) {
+    return userIdForToken(authorization.slice("Bearer ".length).trim());
+  }
   const session = await auth.api.getSession({ headers: request.headers });
   return session?.user.id ?? null;
 }
