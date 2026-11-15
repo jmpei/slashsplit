@@ -15,8 +15,11 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
-    // Vercel preview deployments are protected; this header lets CI through.
-    extraHTTPHeaders: bypass ? { "x-vercel-protection-bypass": bypass } : undefined,
+    // Vercel preview deployments are protected; the header lets CI through, and the bypass cookie
+    // keeps later navigations and page requests through as well.
+    extraHTTPHeaders: bypass
+      ? { "x-vercel-protection-bypass": bypass, "x-vercel-set-bypass-cookie": "true" }
+      : undefined,
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },

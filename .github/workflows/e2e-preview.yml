@@ -1,0 +1,61 @@
+# E2E on every PR: when Vercel finishes a preview deployment it sends a repository_dispatch event
+# (https://vercel.com/docs/git/vercel-for-github#repository-dispatch-events) with the deployment's
+# own URL and commit SHA. Playwright runs against that URL through Deployment Protection, and the
+# result is posted as the "E2E (preview)" commit status on the PR's head commit.
+# GitHub only starts repository_dispatch workflows from the default branch, and runs them with the
+# default branch's latest commit as GITHUB_SHA, so the steps below use the payload's SHA instead.
+name: E2E (preview)
+
+on:
+  repository_dispatch:
+    types: [vercel.deployment.success]
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: e2e-preview-${{ github.event.client_payload.git.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: E2E (preview)
+    if: github.event.client_payload.environment == 'preview'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ github.event.client_payload.git.sha }}
+      E2E_BASE_URL: ${{ github.event.client_payload.url }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Mark E2E (preview) pending
+        run: >
+          gh api "repos/${{ github.repository }}/statuses/$SHA"
+          -f state=pending -f context="E2E (preview)" -f target_url="$RUN_URL"
+          -f description="Playwright running against $E2E_BASE_URL"
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.client_payload.git.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+      - name: Report E2E (preview) result
+        if: ${{ always() }}
+        run: >
+          gh api "repos/${{ github.repository }}/statuses/$SHA"
+          -f state=${{ job.status == 'success' && 'success' || 'failure' }}
+          -f context="E2E (preview)" -f target_url="$RUN_URL"
+          -f description="Playwright ${{ job.status }}"
