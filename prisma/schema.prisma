@@ -30,6 +30,7 @@ model User {
   expenseShares  ExpenseShare[]
   sentSettlements     Settlement[] @relation("SettlementFrom")
   receivedSettlements Settlement[] @relation("SettlementTo")
+  apiTokens           ApiToken[]
 }
 
 model Session {
@@ -205,4 +206,17 @@ model Settlement {
   toUser      User      @relation("SettlementTo", fields: [toUserId], references: [id], onDelete: Cascade)
 
   @@index([householdId])
+}
+
+// A personal API token (#13). Only the sha256 hex of the token is stored; the plaintext is shown once.
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  tokenHash  String    @unique
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

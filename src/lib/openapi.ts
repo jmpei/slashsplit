@@ -4,6 +4,7 @@ import { z } from "zod";
 import { expenseBody } from "@/lib/schemas/expenses";
 import { createHouseholdBody, joinHouseholdBody } from "@/lib/schemas/households";
 import { recordSettlementBody } from "@/lib/schemas/settlements";
+import { createTokenBody } from "@/lib/schemas/tokens";
 
 function jsonSchema(schema: z.ZodType) {
   const { $schema: _unused, ...rest } = z.toJSONSchema(schema) as Record<string, unknown>;
@@ -51,6 +52,35 @@ const settlementRecordSchema = recordSettlementBody.extend({
   householdId: z.string(),
   paidAt: z.string(),
 });
+
+const tokenSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  lastUsedAt: z.string().nullable(),
+  createdAt: z.string(),
+});
+const createdTokenSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  token: z.string().describe("Plaintext token (ss_ + 48 hex). Shown only in this response."),
+  createdAt: z.string(),
+});
+
+// Request example sent with a personal API token (#13), in Redoc's x-codeSamples shape.
+function bearerCurl(method: string, path: string, body: unknown) {
+  return [
+    {
+      lang: "Shell",
+      label: "curl",
+      source: [
+        `curl -X ${method} https://slashsplit.vercel.app${path} \\`,
+        `  -H "Authorization: Bearer ss_..." \\`,
+        `  -H "Content-Type: application/json" \\`,
+        `  -d '${JSON.stringify(body)}'`,
+      ].join("\n"),
+    },
+  ];
+}
 
 const idParam = {
   name: "id",
@@ -116,8 +146,14 @@ export function buildOpenApiSpec() {
           summary: "Create a household and become its owner",
           requestBody: {
             required: true,
-            content: { "application/json": { schema: jsonSchema(createHouseholdBody) } },
+            content: {
+              "application/json": {
+                schema: jsonSchema(createHouseholdBody),
+                examples: { household: { summary: "A new household", value: { name: "Maple House" } } },
+              },
+            },
           },
+          "x-codeSamples": bearerCurl("POST", "/api/v1/households", { name: "Maple House" }),
           responses: {
             "201": {
               description: "Created household with its 8-character invite code.",
@@ -128,6 +164,56 @@ export function buildOpenApiSpec() {
               content: { "application/json": { schema: jsonSchema(errorSchema) } },
             },
             "401": authErrors["401"],
+          },
+        },
+      },
+      "/api/v1/tokens": {
+        get: {
+          summary: "List the caller's personal API tokens (never the token itself)",
+          responses: {
+            "200": {
+              description: "Tokens, newest first.",
+              content: { "application/json": { schema: jsonSchema(z.array(tokenSummarySchema)) } },
+            },
+            "401": authErrors["401"],
+          },
+        },
+        post: {
+          summary: "Create a personal API token; the plaintext is returned once",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: jsonSchema(createTokenBody),
+                examples: { script: { summary: "A token for a script", value: { name: "Laptop script" } } },
+              },
+            },
+          },
+          "x-codeSamples": bearerCurl("POST", "/api/v1/tokens", { name: "Laptop script" }),
+          responses: {
+            "201": {
+              description: "Created token, with its plaintext value shown only here.",
+              content: { "application/json": { schema: jsonSchema(createdTokenSchema) } },
+            },
+            "400": {
+              description: "Invalid token name.",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
+            },
+            "401": authErrors["401"],
+          },
+        },
+      },
+      "/api/v1/tokens/{id}": {
+        delete: {
+          summary: "Revoke one of the caller's API tokens",
+          parameters: [{ ...idParam, description: "Token id." }],
+          responses: {
+            "204": { description: "Token revoked." },
+            "401": authErrors["401"],
+            "404": {
+              description: "The caller has no token with this id.",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
+            },
           },
         },
       },

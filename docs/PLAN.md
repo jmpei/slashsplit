@@ -194,7 +194,8 @@ flowchart LR
 | `GET` | `/api/v1/households/{id}/balances` | Compute net balances per member |
 | `GET` | `/api/v1/households/{id}/settlement-plan` | Compute greedy settlement transfers |
 | `POST` | `/api/v1/households/{id}/settlements` | Record a completed transfer |
-| `GET` / `POST` / `DELETE` | `/api/v1/tokens` | Manage personal Bearer API tokens |
+| `GET` / `POST` | `/api/v1/tokens` | List / create personal Bearer API tokens (plaintext shown once) |
+| `DELETE` | `/api/v1/tokens/{id}` | Revoke a personal Bearer API token |
 | `GET` | `/api/openapi.json`, `/api/docs` | OpenAPI 3.1 JSON spec & Swagger UI |
 
 Every `/api/v1/households/{id}/...` route verifies membership first and responds with `403` for non-members (covered by integration tests).
