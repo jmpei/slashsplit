@@ -69,7 +69,7 @@ test("sign in, share a household, record an expense, settle up to zero", async (
 
   await expectBalance(bo, "Ada", "$0.00");
   await expectBalance(bo, "Bo", "$0.00");
-  await expect(bo.getByText("You don’t owe anyone.")).toBeVisible();
+  await expect(bo.getByText("Everyone is settled up.")).toBeVisible();
 
   await ada.reload();
   await expectBalance(ada, "Ada", "$0.00");
