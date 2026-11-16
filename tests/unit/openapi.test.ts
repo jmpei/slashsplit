@@ -111,6 +111,12 @@ describe("/api/openapi.json", () => {
     expect(schema?.properties?.totalCents).toMatchObject({ type: "integer", minimum: 0 });
   });
 
+  test("PATCH on an expense documents 409 for a draft (#10)", async () => {
+    const doc = await (await getOpenApi()).json();
+    const responses = doc.paths?.["/api/v1/households/{id}/expenses/{eid}"]?.patch?.responses;
+    expect(responses?.["409"]?.description ?? "").toMatch(/draft/i);
+  });
+
   test("every /api/v1 route and HTTP method on disk is documented in paths", async () => {
     const res = await getOpenApi();
     expect(res.status).toBe(200);
