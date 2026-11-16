@@ -41,9 +41,40 @@ jobs:
         run: node scripts/find-preview-url.mjs
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      # Fails fast when the preview does not answer through the bypass (wrong secret, or Vercel
+      # challenging the runner). Prints only status, final host and <title>: never headers, which
+      # carry the bypass cookie.
+      - name: Check the preview answers through the bypass
+        env:
+          E2E_BASE_URL: ${{ steps.preview.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          if [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            echo "::error::VERCEL_AUTOMATION_BYPASS_SECRET is empty in this run"
+            exit 1
+          fi
+          failed=0
+          for path in /sign-in /api/health; do
+            result=$(curl -sS -L -o body.html -w '%{http_code} %{url_effective}' \
+              -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" "$E2E_BASE_URL$path")
+            status=${result%% *}
+            host=$(echo "${result#* }" | sed -E 's#^https?://([^/?]+).*#\1#')
+            title=$(grep -o '<title>[^<]*</title>' body.html | head -1 | sed -E 's#</?title>##g')
+            echo "$path -> HTTP $status, final host $host, title: ${title:-(none)}"
+            if [ "$status" != "200" ] || [ "$host" != "${E2E_BASE_URL#https://}" ]; then failed=1; fi
+          done
+          rm -f body.html
+          if [ "$failed" = "1" ]; then
+            echo "::error::The preview did not return 200 on its own host through the bypass header. Check the VERCEL_AUTOMATION_BYPASS_SECRET Actions secret against Vercel Deployment Protection."
+            exit 1
+          fi
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test
+      # globalTimeout (12 min, playwright.config.ts) ends the run first; the step limit is a backstop
+      # so the report upload below always runs inside the job's 30 minutes.
+      - name: Run Playwright against the preview
+        run: npx playwright test
+        timeout-minutes: 14
         env:
           E2E_BASE_URL: ${{ steps.preview.outputs.url }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}

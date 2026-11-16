@@ -10,7 +10,10 @@ export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // Against a preview, one retry and a 12-minute cap end a broken run early enough for CI to
+  // upload the report.
+  retries: process.env.E2E_BASE_URL ? 1 : process.env.CI ? 2 : 0,
+  globalTimeout: process.env.E2E_BASE_URL ? 12 * 60_000 : undefined,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL,
