@@ -1,6 +1,7 @@
-// Pins how E2E runs on every PR (#14): Vercel's repository_dispatch event starts Playwright against
-// the PR's own preview URL, the result lands on the PR's head commit as "E2E (preview)", and the
-// protection bypass reaches every request. Reads the files as text so no YAML library is needed.
+// Pins how E2E runs on every PR (#14): each pull request push waits for its head commit's Vercel
+// preview through the Vercel API, runs Playwright against that deployment's own URL as the
+// "E2E (preview)" job, and the protection bypass reaches every request. Reads the files as text so
+// no YAML library is needed.
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
@@ -16,22 +17,27 @@ describe("e2e-preview.yml", () => {
   });
 
   describe.runIf(workflowExists)("contents", () => {
-    test("runs when Vercel reports a successful deployment", () => {
-      expect(workflow).toMatch(/^on:\s*$[\s\S]*?^ {2}repository_dispatch:/m);
-      expect(workflow).toMatch(/types:[\s\S]*?vercel\.deployment\.success/);
-    });
-
-    test("runs only for preview deployments", () => {
-      expect(workflow).toContain("github.event.client_payload.environment == 'preview'");
+    test("runs on every pull request push and can be started by hand", () => {
+      expect(workflow).toMatch(/^on:\s*$[\s\S]*?^ {2}pull_request:/m);
+      expect(workflow).toMatch(/types:\s*\[opened, synchronize, reopened\]/);
+      expect(workflow).toMatch(/^ {2}workflow_dispatch:/m);
+      expect(workflow).not.toContain("repository_dispatch");
+      expect(workflow).not.toContain("client_payload");
     });
 
     test("defines a job named E2E (preview)", () => {
       expect(workflow).toMatch(/^ {4}name: E2E \(preview\)\s*$/m);
     });
 
-    test("tests the commit and the deployment URL that Vercel reported", () => {
-      expect(workflow).toMatch(/ref: \$\{\{ github\.event\.client_payload\.git\.sha \}\}/);
-      expect(workflow).toMatch(/E2E_BASE_URL: \$\{\{ github\.event\.client_payload\.url \}\}/);
+    test("finds the head commit's READY preview through the Vercel API with VERCEL_TOKEN", () => {
+      expect(workflow).toContain("github.event.pull_request.head.sha");
+      expect(workflow).toMatch(/VERCEL_TOKEN: \$\{\{ secrets\.VERCEL_TOKEN \}\}/);
+      expect(workflow).toContain("node scripts/find-preview-url.mjs");
+    });
+
+    test("checks out the head commit and tests the deployment URL the lookup found", () => {
+      expect(workflow).toMatch(/ref: \$\{\{ env\.HEAD_SHA \}\}/);
+      expect(workflow).toMatch(/E2E_BASE_URL: \$\{\{ steps\.preview\.outputs\.url \}\}/);
     });
 
     test("passes the protection bypass secret from Actions secrets", () => {
@@ -51,10 +57,9 @@ describe("e2e-preview.yml", () => {
       expect(workflow).toMatch(/if: \$\{\{ always\(\) \}\}|if: always\(\)/);
     });
 
-    test("reports an E2E (preview) commit status on the deployed commit", () => {
-      expect(workflow).toMatch(/statuses: write/);
-      expect(workflow).toMatch(/statuses\/\$\{\{ github\.event\.client_payload\.git\.sha \}\}|statuses\/\$SHA/);
-      expect(workflow).toMatch(/context=E2E \(preview\)|context="E2E \(preview\)"/);
+    test("reports through the job check, not the commit status API", () => {
+      expect(workflow).not.toMatch(/statuses: write/);
+      expect(workflow).not.toMatch(/repos\/[^\s]*\/statuses\//);
     });
   });
 });
