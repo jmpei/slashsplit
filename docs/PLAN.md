@@ -244,11 +244,10 @@ flowchart LR
   G -->|Yes| H["prisma migrate deploy + Vercel Production"]
 ```
 
-## 11. AI Workflow (`AGENTS.md` & `docs/ai-usage.md`)
+## 11. AI Workflow (`AGENTS.md`)
 
 - Primary AI IDE harness: **Antigravity** / **Claude Code**, governed by [`AGENTS.md`](../AGENTS.md).
 - **Theodore Pei** maintains and commits updates to `AGENTS.md` across Sprint 1 and Sprint 2.
-- Prompt engineering patterns, AI failure modes, and rule updates are logged in `docs/ai-usage.md`.
 
 ## 12. Sprint Plan
 
@@ -270,8 +269,6 @@ The project is organized into three milestones, all owned by **Theodore Pei**:
 | Database Schema Diagram | `docs/schema.md` (Mermaid ER diagram) | Theodore Pei |
 | Local Setup & Deployment Guide | `docs/setup.md` | Theodore Pei |
 | Sprint Planning, Standups & Retrospectives | `docs/sprints/` | Theodore Pei |
-| AI Usage Log | `docs/ai-usage.md` | Theodore Pei |
-| Contribution Log | `docs/contributions.md` | Theodore Pei |
 | 10-Minute Demo Video | Linked in `README.md` | Theodore Pei |
 | Production Deployment URL | `https://slashsplit.vercel.app` (in `README.md`) | Theodore Pei |
 | 300-Word Reflection | Submitted on Canvas | Theodore Pei |

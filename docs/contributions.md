@@ -17,22 +17,27 @@ Every issue, the pull request that closed it, and the merge commit on `main`. Da
 | #11 | Real-time balance updates with Pusher | #37 | `be2c982` | Theodore Pei |
 | #12 | Monthly rent bill with Vercel Cron | none (closed as not planned) | none | — |
 | #13 | Personal API tokens for the public API | #33 | `47fcaba` | Theodore Pei |
-| #14 | E2E on preview deployments | #39 | `313bccd` | Theodore Pei |
+| #14 | E2E on preview deployments | #39, #42 | `313bccd`, `770f9ee` | Theodore Pei |
 | #15 | Preview environments with Neon branches and automated migrations | #38 | `6ced011` | Theodore Pei |
 | #16 | UI polish and mobile layout | #40 | `0086d7c` | Theodore Pei |
 | none | Context7 rule and TDD rules update (docs only) | #32 | `7d6b878` | Theodore Pei |
+| none | Final documentation package (docs only) | #41 | `c0e216f` | Theodore Pei |
+| #3, #6, #9, #10, #11, #13, #14 | Hardening from evaluator findings, first refactor commit | #45 | `171cd53` | Theodore Pei |
+| none | Sprint records and standups from Marcus Ramos (docs only) | #44 | `9bb3177` | Marcus Ramos |
+| none | Final docs refresh (docs only) | #46 | this PR | Theodore Pei |
 
-Git author name: Jiaming Pei.
+Theodore Pei's git author name is Jiaming Pei.
 
 ## Commit counts
 
-`git shortlog -sn main` at `0086d7c`:
+`git shortlog -sn main` at `9bb3177`:
 
 ```
-    98  Jiaming Pei
+   126  Jiaming Pei
+     3  Marcus Ramos
 ```
 
-Of the 98 commits, 37 are merge commits. The other 61 by type: `test` 25, `feat` 14, `docs` 8, `fix` 6, `ci` 4, `chore` 4.
+Of the 129 commits, 41 are merge commits. The other 88 by type: `test` 34, `docs` 16, `feat` 14, `fix` 12, `ci` 7, `chore` 4, `refactor` 1.
 
 ## Reviews and docs by Marcus Ramos
 
@@ -46,6 +51,5 @@ Git author: Marcus Ramos (`marcusramos2024`).
 | #21 | Post-merge review: `feature/4-households` — 8-character unambiguous invite code generation, OWNER/MEMBER roles, 403 Forbidden for non-members on all `/api/v1/households/{id}/...` routes; integration tests cover auth path; TDD separation confirmed. | 2026-11-15 |
 | #24 | Post-merge review: `feature/6-itemized-expenses` — `Expense`/`ExpenseItem`/`ItemParticipant`/`ExpenseTax`/`ExpenseWeight`/`ExpenseShare` tables; CRUD API with `authorizeMember` guard; 400 on duplicate participant or ratio weight; integer-cent money throughout; Red → Green confirmed. | 2026-11-15 |
 | #25 | Post-merge review: `feature/7-balances-page` — `/balances`, `/settlement-plan`, `/settlements` endpoints; Settlement table; one-click Mark paid; E2E covers the full settlement flow; integer-cent throughout; Red → Green confirmed. | 2026-11-15 |
-| #33 | Post-merge review: `feature/13-api-tokens` — only `tokenHash` (SHA-256) stored, plaintext shown once at creation; `GET` never returns hash; `DELETE` 404 for tokens not owned by caller; Bearer auth fallback in `src/server/api.ts`; Red → Green confirmed. | 2026-11-15 |
 | #42 | Comment review (open PR): Dependabot PRs get no `VERCEL_TOKEN`, so preview E2E would fail on them — suggested guard. | 2026-11-15 |
-| this PR | `AGENTS.md` v3 changelog (rule 12, 2026-11-12), Sprint 1 and Sprint 2 standup entries for Marcus, this review log. | 2026-11-15 |
+| #44 | Merged docs PR with standup entries, an `AGENTS.md` rule and this review log; the standups and the rule were revised in #46 to match the GitHub record (reviews posted on 2026-11-15). | 2026-11-15 |
