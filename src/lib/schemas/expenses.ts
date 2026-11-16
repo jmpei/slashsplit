@@ -61,7 +61,7 @@ export type DraftEdits = z.infer<typeof draftEditsBody>;
 
 export const expenseStatusQuery = z.enum(["CONFIRMED", "DRAFT"]).default("CONFIRMED");
 
-// Builds YYYY-MM-DD in the caller's local timezone (AGENTS.md §1.6: never toISOString().slice(0, 10)).
+// Builds YYYY-MM-DD in the caller's local timezone (.claude/rules/api-and-domain.md rule 7: never toISOString().slice(0, 10)).
 export function localCalendarDay(date: Date = new Date()): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

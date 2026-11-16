@@ -31,7 +31,7 @@ Add AI-powered receipt scanning into editable drafts with total-mismatch validat
 
 ## 3. What Sprint 2 Delivers in Detail (PR Breakdown)
 
-Every feature PR below must follow `AGENTS.md` §3 (**Commit 1 = Red failing test commit `test(...)`**, **Commit 2 = Green implementation commit `feat(...)`**) and be merged with **Create a merge commit** after **Theodore Pei** reviews and approves it:
+Every feature PR below must follow `AGENTS.md` §2 rule 1 (**Commit 1 = Red failing test commit `test(...)`**, **Commit 2 = Green implementation commit `feat(...)`**) and be merged with **Create a merge commit** after **Theodore Pei** reviews and approves it:
 
 1. **PR 1 — Issue `#13`: Public API Bearer Tokens (`feature/13-api-tokens`)**
    - Add `ApiToken` model & migration (`id`, `userId`, `name`, `tokenHash`, `lastUsedAt`, `createdAt`). Store SHA-256 hash only; return the plain token once on creation.
