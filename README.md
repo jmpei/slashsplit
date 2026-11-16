@@ -32,6 +32,8 @@ Rules for AI agents and contributors: [`AGENTS.md`](AGENTS.md).
 | [`docs/schema.md`](docs/schema.md) | Database schema |
 | [`docs/api.md`](docs/api.md) | Using the API with a token |
 | [`docs/setup.md`](docs/setup.md) | Environments and where each variable is set |
+| [`docs/ai-usage.md`](docs/ai-usage.md) | How AI was used: rules, context, TDD, evaluations |
+| [`docs/contributions.md`](docs/contributions.md) | Issues, PRs, merge commits and reviews by person |
 | [`docs/sprints/sprint1.md`](docs/sprints/sprint1.md), [`sprint-1-planning.md`](docs/sprints/sprint-1-planning.md), [`sprint-1-standups.md`](docs/sprints/sprint-1-standups.md), [`sprint-1-retro.md`](docs/sprints/sprint-1-retro.md) | Sprint 1 plan, planning, standups, retrospective |
 | [`docs/sprints/sprint2.md`](docs/sprints/sprint2.md), [`sprint-2-planning.md`](docs/sprints/sprint-2-planning.md), [`sprint-2-standups.md`](docs/sprints/sprint-2-standups.md), [`sprint-2-retro.md`](docs/sprints/sprint-2-retro.md) | Sprint 2 plan, planning, standups, retrospective |
 | [`AGENTS.md`](AGENTS.md), [`DESIGN.md`](DESIGN.md) | Rules for AI agents and contributors; design system |
