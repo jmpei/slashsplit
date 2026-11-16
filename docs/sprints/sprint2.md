@@ -50,4 +50,4 @@ Every feature PR below must follow `AGENTS.md` §2 rule 1 (**Commit 1 = Red fail
 6. **PR 6 — Issue `#16`: UI Polish, Accessibility & Docs (`docs/16-ui-and-docs`)**
    - Mobile (360 px) & desktop (1280 px) UI polish + light/dark contrast verification, empty states, error messages and keyboard access.
    - Add the Sprint 2 rules, an accessibility rule and a changelog to `AGENTS.md`.
-   - Complete `docs/schema.md` (Mermaid ER diagram), `docs/setup.md`, `docs/api.md`, `docs/architecture.md`, `docs/ai-usage.md`, `docs/contributions.md`, and Sprint 1 & 2 standups and retrospectives.
+   - Complete `docs/schema.md` (Mermaid ER diagram), `docs/setup.md`, `docs/api.md`, `docs/architecture.md`, and Sprint 1 & 2 standups and retrospectives.
