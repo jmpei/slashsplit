@@ -35,6 +35,25 @@ describe("receiptExtractionSchema", () => {
     expect(receiptExtractionSchema.safeParse({ ...costco, totalCents: 11.23 }).success).toBe(false);
     expect(receiptExtractionSchema.safeParse({ ...costco, date: "Nov 1, 2026" }).success).toBe(false);
   });
+
+  test("rejects impossible calendar dates", () => {
+    for (const date of ["2026-13-45", "2026-02-30", "2026-00-10", "2026-04-31"]) {
+      expect(receiptExtractionSchema.safeParse({ ...costco, date }).success, date).toBe(false);
+    }
+    expect(receiptExtractionSchema.safeParse({ ...costco, date: "2028-02-29" }).success).toBe(true);
+  });
+
+  test("rejects a negative total or tax amount", () => {
+    expect(receiptExtractionSchema.safeParse({ ...costco, totalCents: -1123 }).success).toBe(false);
+    expect(
+      receiptExtractionSchema.safeParse({ ...costco, taxes: [{ code: "GST", amountCents: -25 }] }).success,
+    ).toBe(false);
+  });
+
+  test("still accepts a negative-price discount line (PLAN §5.5)", () => {
+    const items = [...costco.items, { name: "Coupon", priceCents: -100, taxes: [] }];
+    expect(receiptExtractionSchema.safeParse({ ...costco, items, totalCents: 1023 }).success).toBe(true);
+  });
 });
 
 describe("selectExtractor", () => {
