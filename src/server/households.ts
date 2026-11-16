@@ -2,6 +2,7 @@
 // guards every household route. Returns plain objects, never Prisma models.
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { notifyHouseholdUpdated } from "@/server/realtime";
 
 export type Role = "OWNER" | "MEMBER";
 export type HouseholdSummary = { id: string; name: string; role: Role };
@@ -57,18 +58,30 @@ export async function listHouseholds(userId: string): Promise<HouseholdSummary[]
   return memberships.map((m) => ({ id: m.household.id, name: m.household.name, role: m.role }));
 }
 
-// Joining a household you are already in is a no-op that returns your existing role.
+// Joining a household you are already in is a no-op that returns your existing role. A new member
+// bumps the household version and notifies open pages (#11), so they show the roommate at once.
 export async function joinHousehold(userId: string, inviteCode: string): Promise<HouseholdSummary> {
   const household = await prisma.household.findUnique({
     where: { inviteCode: normalizeInviteCode(inviteCode) },
   });
   if (!household) throw new NotFoundError("No household has that invite code.");
-  const membership = await prisma.membership.upsert({
-    where: { userId_householdId: { userId, householdId: household.id } },
-    create: { userId, householdId: household.id },
-    update: {},
-  });
-  return { id: household.id, name: household.name, role: membership.role };
+  const where = { userId_householdId: { userId, householdId: household.id } };
+  const existing = await prisma.membership.findUnique({ where });
+  if (existing) return { id: household.id, name: household.name, role: existing.role };
+  try {
+    const membership = await prisma.$transaction(async (tx) => {
+      const created = await tx.membership.create({ data: { userId, householdId: household.id } });
+      await bumpHouseholdVersion(tx, household.id);
+      return created;
+    });
+    await notifyHouseholdUpdated(household.id);
+    return { id: household.id, name: household.name, role: membership.role };
+  } catch (error) {
+    // A second join request from the same user won the race; that one already notified.
+    if (!isUniqueViolation(error)) throw error;
+    const membership = await prisma.membership.findUniqueOrThrow({ where });
+    return { id: household.id, name: household.name, role: membership.role };
+  }
 }
 
 export async function isMember(userId: string, householdId: string): Promise<boolean> {

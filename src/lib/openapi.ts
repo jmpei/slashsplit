@@ -459,12 +459,16 @@ export function buildOpenApiSpec() {
         get: {
           summary: "Get the household's change counter for real-time polling",
           description:
-            "Increases with every expense create, edit, delete or confirm and every recorded settlement. Clients without Pusher poll it every 2 seconds and refresh when it changes.",
+            "Increases with every expense create, edit, delete or confirm, every recorded settlement, and every new member. Clients without Pusher poll it every 2 seconds and refresh when it changes.",
           parameters: [idParam],
           responses: {
             "200": {
               description: "Current change counter.",
               content: { "application/json": { schema: jsonSchema(householdVersionSchema) } },
+            },
+            "404": {
+              description: "Household not found (deleted after the membership check).",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
             },
             ...authErrors,
           },
