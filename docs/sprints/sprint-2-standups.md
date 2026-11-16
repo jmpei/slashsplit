@@ -36,6 +36,6 @@ One entry per day worked: what I did, what is next, what blocks me. Each entry i
 - **Blockers:** Met and cleared today. Vercel rejects request bodies above about 4.5 MB, so large receipt photos would fail in production; fixed by compressing them in the browser (#36). Better Auth's rate limit (3 sign-up or sign-in requests per 10 s per IP) failed 19 of 34 E2E tests on a preview; fixed by turning rate limiting off where the test login is on (#39). The `E2E (preview)` workflow only starts from `main`, so it could not run on its own PR before merge.
 
 **Marcus Ramos** — _DRAFT for Marcus to edit before merge._
-- **Did:** Reviewed Theodore's open PR #42 (preview E2E trigger) and left post-merge review comments on the Sprint 1 PRs #17, #18, #20, #21, #24 and #25. Added `AGENTS.md` rule 12 (partner review on every PR) and my rows in `docs/contributions.md`. _[Marcus: add anything else you did, e.g. providing the Gemini API key.]_
+- **Did:** Reviewed Theodore's open PR #42 (preview E2E trigger) (comment review: Dependabot PRs get no `VERCEL_TOKEN`, so preview E2E would fail on them). Added `AGENTS.md` rule 12 (partner review on every PR) and my rows in `docs/contributions.md`. _[Marcus: add anything else you did, e.g. providing the Gemini API key.]_
 - **Next:** _[Marcus to fill in.]_
 - **Blockers:** _[Marcus to fill in.]_

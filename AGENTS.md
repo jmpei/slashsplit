@@ -55,7 +55,7 @@ Load these files when working in their respective areas:
 
 ## Changelog
 
-- **2026-11-15** (Marcus Ramos) — Added rule 12: partner review on every PR, with post-merge reviews labeled as such.
+- **v3 — 2026-11-15** (Marcus Ramos) — Added rule 12: partner review on every PR, with post-merge reviews labeled as such.
 - **2026-11-15** — Sprint 2 rules: receipt tests use fixtures and never call Gemini; API tokens stored as SHA-256 hashes; real-time falls back to polling and only members may subscribe; previews run on their own Neon branch. Added the accessibility rule and the no-new-dependencies rule.
 
 <!-- BEGIN:nextjs-agent-rules -->

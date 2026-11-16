@@ -40,6 +40,6 @@ Git author: Marcus Ramos (`marcusramos2024`). All on 2026-11-15.
 
 | PR | What | When |
 |---|---|---|
-| #42 | Review of the preview E2E trigger (open PR) | before merge |
-| #17, #18, #20, #21, #24, #25 | Review comments on the Sprint 1 PRs | after merge, labeled as post-merge |
+| #42 | Review of the preview E2E trigger (comment; open PR) | before merge |
+| #17, #18, #20, #21, #24, #25 | Post-merge review comments on the Sprint 1 PRs | not posted yet |
 | this PR | `AGENTS.md` rule 12 (partner review), standup entries, this section | — |
