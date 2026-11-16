@@ -220,6 +220,29 @@ describe("every balance-changing mutation publishes household-updated once", () 
   });
 });
 
+describe("joining a household (#11)", () => {
+  test("a new member bumps the version and publishes household-updated once", async () => {
+    const cy = await signUp("Cy");
+    const { inviteCode } = (await prisma.household.findUniqueOrThrow({ where: { id: houseId } }));
+    const before = await currentVersion();
+    published.length = 0;
+    const res = await joinHousehold(request("/api/v1/households/join", cy, "POST", { inviteCode }));
+    expect(res.status).toBe(200);
+    expect(await currentVersion()).toBeGreaterThan(before);
+    expectOneHouseholdEvent();
+  });
+
+  test("joining again as a member changes nothing and publishes nothing", async () => {
+    const { inviteCode } = (await prisma.household.findUniqueOrThrow({ where: { id: houseId } }));
+    const before = await currentVersion();
+    published.length = 0;
+    const res = await joinHousehold(request("/api/v1/households/join", bo, "POST", { inviteCode }));
+    expect(res.status).toBe(200);
+    expect(await currentVersion()).toBe(before);
+    expect(published).toHaveLength(0);
+  });
+});
+
 describe("POST /api/pusher/auth: only members can subscribe to the household channel", () => {
   const channel = () => `private-household-${houseId}`;
 

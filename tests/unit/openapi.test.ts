@@ -117,6 +117,12 @@ describe("/api/openapi.json", () => {
     expect(responses?.["409"]?.description ?? "").toMatch(/draft/i);
   });
 
+  test("GET /version documents 404 for a household that no longer exists (#11)", async () => {
+    const doc = await (await getOpenApi()).json();
+    const responses = doc.paths?.["/api/v1/households/{id}/version"]?.get?.responses;
+    expect(responses?.["404"]?.description ?? "").toMatch(/not found/i);
+  });
+
   test("every /api/v1 route and HTTP method on disk is documented in paths", async () => {
     const res = await getOpenApi();
     expect(res.status).toBe(200);
