@@ -12,6 +12,9 @@ import { localCalendarDay } from "@/lib/schemas/expenses";
 import { getExpense, type ExpenseRecord } from "@/server/expenses";
 import { listMembers } from "@/server/households";
 
+// Users see only this; the reason (which may name configuration) goes to the server log.
+export const SCAN_FAILED_MESSAGE = "We couldn’t read this receipt.";
+
 async function extract(
   extractor: ReceiptExtractor,
   image: ReceiptImage,
@@ -20,15 +23,16 @@ async function extract(
   try {
     reply = await extractor(image);
   } catch (error) {
-    const reason = error instanceof Error ? error.message : "unknown error";
-    return { error: `Couldn't read the receipt: ${reason}` };
+    console.error("Receipt scan failed:", error);
+    return { error: SCAN_FAILED_MESSAGE };
   }
   const parsed = receiptExtractionSchema.safeParse(reply);
   if (!parsed.success) {
     const reason = parsed.error.issues
       .map((issue) => `${issue.path.join(".") || "reply"}: ${issue.message}`)
       .join("; ");
-    return { error: `The scanned receipt didn't match the expected shape (${reason}).` };
+    console.error(`Receipt scan reply failed validation: ${reason}`);
+    return { error: SCAN_FAILED_MESSAGE };
   }
   return { receipt: parsed.data };
 }

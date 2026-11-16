@@ -404,7 +404,7 @@ export function buildOpenApiSpec() {
         post: {
           summary: "Scan a receipt image into a DRAFT itemized expense (the image is not stored)",
           description:
-            "Accepts a jpg, png, heic or webp image up to 10 MB. Gemini's reply becomes a DRAFT with every member ticked on every item; a reply that fails validation becomes an empty DRAFT with `scanError`. Drafts do not affect balances.",
+            "Accepts a jpg, png, heic or webp image up to 10 MB; the type is read from the image bytes, not the declared MIME type. Gemini's reply becomes a DRAFT with every member ticked on every item; a reply that fails validation becomes an empty DRAFT with a generic `scanError`. Drafts do not affect balances.",
           parameters: [idParam],
           requestBody: {
             required: true,
@@ -425,7 +425,11 @@ export function buildOpenApiSpec() {
               content: { "application/json": { schema: jsonSchema(expenseRecordSchema) } },
             },
             "400": {
-              description: "Missing file, unsupported image type, or larger than 10 MB.",
+              description: "Missing file, bytes that are not a jpg/png/heic/webp image, or an image larger than 10 MB.",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
+            },
+            "413": {
+              description: "Request body too large: refused before it is read (Content-Length) or as soon as it passes the limit.",
               content: { "application/json": { schema: jsonSchema(errorSchema) } },
             },
             ...authErrors,

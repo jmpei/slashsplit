@@ -3,10 +3,12 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import { isCalendarDay } from "@/lib/schemas/expenses";
 
+// Item prices may be negative (discount lines, PLAN §5.5); taxes and the total may not.
 export const receiptExtractionSchema = z.object({
   merchant: z.string(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a YYYY-MM-DD date."),
+  date: z.string().refine(isCalendarDay, "Use a real YYYY-MM-DD date."),
   items: z.array(
     z.object({
       name: z.string(),
@@ -14,8 +16,8 @@ export const receiptExtractionSchema = z.object({
       taxes: z.array(z.string()),
     }),
   ),
-  taxes: z.array(z.object({ code: z.string(), amountCents: z.number().int() })),
-  totalCents: z.number().int(),
+  taxes: z.array(z.object({ code: z.string(), amountCents: z.number().int().min(0) })),
+  totalCents: z.number().int().min(0),
 });
 
 export type ReceiptExtraction = z.infer<typeof receiptExtractionSchema>;
