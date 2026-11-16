@@ -1,5 +1,5 @@
 import { afterAll, expect, test } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 
 afterAll(async () => {
   await prisma.$disconnect();

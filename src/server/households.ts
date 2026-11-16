@@ -1,7 +1,7 @@
 // Household service (#4): create, join by invite code, members, and the membership check that
 // guards every household route. Returns plain objects, never Prisma models.
 import { Prisma } from "@/generated/prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { notifyHouseholdUpdated } from "@/server/realtime";
 
 export type Role = "OWNER" | "MEMBER";

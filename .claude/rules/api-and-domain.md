@@ -18,7 +18,7 @@ paths:
    - All money division uses `allocate(totalCents, weights)` (`docs/PLAN.md` §5.1) with deterministic tie-breaking by ascending `userId`.
    - Keep `src/lib/split/` 100% pure (no Prisma, no Next.js, no `process.env`). Every split test asserts `sum(shares) === totalCents`.
 3. **Service & route boundary (`src/server/` vs `src/app/api/v1/`):**
-   - Only `src/server/` imports Prisma (`@/lib/db` and `@/generated/prisma/client`).
+   - Only `src/server/` imports Prisma (`@/server/db` and `@/generated/prisma/client`).
    - Route handlers in `src/app/api/v1/` only parse with `zod`, call `authorizeMember(request, householdId)`, and delegate to `src/server/`.
 4. **Household membership check (`403`):**
    - Every `/api/v1/households/{id}/...` route must check membership first and return `401` (unauthenticated) or `403` (non-member), backed by an integration test.

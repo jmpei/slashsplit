@@ -2,7 +2,7 @@
 // list without secrets, revoke, and Bearer authentication on /api/v1.
 import { createHash } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { auth } from "@/server/auth";
 import { GET as listTokens, POST as createToken } from "@/app/api/v1/tokens/route";
 import { DELETE as deleteToken } from "@/app/api/v1/tokens/[id]/route";

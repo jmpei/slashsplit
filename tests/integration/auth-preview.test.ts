@@ -1,7 +1,7 @@
 // Test login and auth URL on Vercel previews (#15): Vercel builds previews with NODE_ENV=production,
 // so the test login follows VERCEL_ENV when it is set, and previews fall back to their own URL.
 import { afterAll, afterEach, describe, expect, test, vi } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { authBaseURL, createAuth, testLoginEnabled } from "@/server/auth";
 
 const secret = "integration-test-secret-at-least-32-chars";

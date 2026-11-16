@@ -1,7 +1,7 @@
 // Receipt scan endpoint (#9) through the real route handler and Postgres. The extractor is the
 // fixture one (RECEIPT_EXTRACTOR=fixture:<name>), so no test calls Gemini.
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { auth } from "@/server/auth";
 import { POST as createHousehold } from "@/app/api/v1/households/route";
 import { POST as joinHousehold } from "@/app/api/v1/households/join/route";

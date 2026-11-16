@@ -1,7 +1,7 @@
 // Receipt scan service (#9): runs the extractor, validates its untrusted reply with zod, and saves a
 // DRAFT expense. A reply that fails validation (or an extractor error) becomes an empty draft with
 // scanError, so the payer can still fill it in by hand. Drafts never affect balances.
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import {
   receiptExtractionSchema,
   type ReceiptExtraction,

@@ -1,7 +1,7 @@
 // Sign-in rules (#3): test login only outside production, users land in the User table, the
 // session cookie is a JWT, and Google sign-in is offered once its credentials are set.
 import { afterAll, describe, expect, test } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { createAuth } from "@/server/auth";
 
 const secret = "integration-test-secret-at-least-32-chars";

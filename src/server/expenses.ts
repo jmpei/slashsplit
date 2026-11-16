@@ -1,6 +1,6 @@
 // Expense service (#6): create, list, view, edit and delete expenses inside a household.
 // Computes shares through the pure split functions in src/lib/split/ and stores plain integer cents.
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import type { DraftEdits, ExpenseInput } from "@/lib/schemas/expenses";
 import { splitByRatio, splitEqual, splitItemized, type Share } from "@/lib/split/split-expense";
 import { bumpHouseholdVersion, listMembers, NotFoundError } from "@/server/households";

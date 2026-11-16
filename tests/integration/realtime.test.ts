@@ -3,7 +3,7 @@
 // version counter moves on every create, edit, delete, confirm and settlement.
 import { createHmac } from "node:crypto";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { auth } from "@/server/auth";
 import { setRealtimePublisher, type RealtimeEvent } from "@/server/realtime";
 import { POST as createHousehold } from "@/app/api/v1/households/route";

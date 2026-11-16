@@ -1,7 +1,7 @@
 // Expenses API (#6) through real route handlers and Postgres: itemized, equal and ratio splits,
 // listing, viewing, editing, deleting, and 401/403 access checks.
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { auth } from "@/server/auth";
 import { POST as createHousehold } from "@/app/api/v1/households/route";
 import { POST as joinHousehold } from "@/app/api/v1/households/join/route";
