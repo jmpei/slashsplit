@@ -63,16 +63,17 @@ describe("pickPreviewDeployment", () => {
     expect(picked).toEqual({ status: "ready", url: "https://slashsplit-new.vercel.app" });
   });
 
-  test("reports failure when this commit's only deployments errored or were canceled", () => {
+  test("reports the newest failed state when this commit's deployments all errored or were canceled", () => {
+    // The Vercel API lists deployments newest first.
     expect(
       pickPreviewDeployment(
         [
-          deployment("slashsplit-a.vercel.app", sha, "ERROR"),
-          deployment("slashsplit-b.vercel.app", sha, "CANCELED"),
+          deployment("slashsplit-new.vercel.app", sha, "ERROR"),
+          deployment("slashsplit-old.vercel.app", sha, "CANCELED"),
         ],
         sha,
       ),
-    ).toEqual({ status: "failed", state: "CANCELED" });
+    ).toEqual({ status: "failed", state: "ERROR" });
   });
 });
 
@@ -91,6 +92,8 @@ describe("findPreviewUrl", () => {
     expect(url.searchParams.get("projectId")).toBe("prj_9McdRm0FasqxQoZLRddb76uucZYf");
     expect(url.searchParams.get("teamId")).toBe("team_c4rmF3YoM5Pt4AbcDawJeehg");
     expect(url.searchParams.get("target")).toBe("preview");
+    // The default page is 20 deployments; a busy day could push this commit's off it.
+    expect(Number(url.searchParams.get("limit"))).toBeGreaterThanOrEqual(100);
     expect(new Headers(init.headers).get("authorization")).toBe("Bearer test-token");
   });
 
