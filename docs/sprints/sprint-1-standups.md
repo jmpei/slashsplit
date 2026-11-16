@@ -1,6 +1,6 @@
 # Sprint 1 standups
 
-One entry per person per day: what I did yesterday, what I'm doing today, what blocks me.
+One entry per day: what I did yesterday, what I'm doing today, what blocks me.
 
 ## 2026-11-07
 

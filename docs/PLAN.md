@@ -1,6 +1,6 @@
 # SlashSplit — Project Plan
 
-CS6983 Project 2 · Pair Project (**Theodore Pei** & **Marcus Ramos**) · Due **2026-11-12 (Thu) 23:59**
+CS6983 Project 2 · **Theodore Pei** · Due **2026-11-12 (Thu) 23:59**
 
 ## 1. One-Line Summary
 
@@ -19,10 +19,10 @@ A shared-expense web app for roommates: snap a receipt, let AI turn it into an i
 | TDD (red → green → refactor) | Failing tests committed separately (`test(...)`) before implementation (`feat(...)`), merged with merge commits (see §9) |
 | Unit + Integration + E2E tests | Vitest (unit) + Vitest against real PostgreSQL (integration) + Playwright (E2E) |
 | Multi-stage CI, PR previews, security scans, auto-deploy | GitHub Actions + CodeQL + npm audit + gitleaks + Dependabot + Vercel + Neon (see §10) |
-| Shared `AGENTS.md` | Jointly maintained by **Theodore Pei** and **Marcus Ramos**, updated every sprint (see §11) |
+| Shared `AGENTS.md` | Maintained by **Theodore Pei**, updated every sprint (see §11) |
 | 2+ sprints, 5+ issues per sprint | Sprint 1 has 8 issues; Sprint 2 has 7 active issues (see §12, [`docs/sprints/sprint1.md`](sprints/sprint1.md), [`docs/sprints/sprint2.md`](sprints/sprint2.md)) |
-| 3+ standups per partner per sprint | Daily standup log per partner in `docs/sprints/` |
-| 5+ PR reviews per partner | One issue per branch/PR: Marcus reviews Theodore’s Sprint 1 PRs; Theodore reviews Marcus’s Sprint 2 PRs |
+| 3+ standups per sprint | Daily standup log in `docs/sprints/` |
+| 5+ PR reviews | One issue per branch/PR; before merge, an independent evaluator agent tests each behavior-changing PR against the issue’s acceptance criteria and its report is posted as the PR review |
 
 ## 3. Features
 
@@ -33,7 +33,6 @@ A shared-expense web app for roommates: snap a receipt, let AI turn it into an i
 | F3 | Balances & settlement: show each member’s net balance, compute a greedy settlement plan, and mark transfers paid | Sprint 1 |
 | F4 | AI receipt scan: upload a receipt photo, parse into an editable draft with validation, and confirm to save | Sprint 2 |
 | F5 | Real-time updates: when someone records an expense or settlement, roommates’ balance views update automatically | Sprint 2 |
-| F6 | Monthly recurring bills: scheduled monthly bill generation | Sprint 2 (cut first if time-constrained) |
 | F7 | Public API: personal Bearer tokens + OpenAPI 3.1 & Swagger UI | Sprint 1 skeleton (#8), Sprint 2 tokens (#13) |
 
 ## 4. User Stories & Acceptance Criteria
@@ -65,9 +64,6 @@ As the payer, I want to snap a photo of a receipt to prefill items instead of ty
 
 **US5 — Real-Time Updates**
 - When Roommate A confirms an expense or records a settlement, Roommate B’s balances view updates within 3 seconds without a manual page reload.
-
-**US6 — Monthly Recurring Bills (Optional / Descoped First)**
-- Generates a monthly rent expense on the 1st of the month, idempotently (at most once per bill per calendar month).
 
 ## 5. Split Rules (Pure Functions, 100% TDD)
 
@@ -144,7 +140,7 @@ Single structured multimodal call to Gemini Flash using `responseSchema`:
 | Authentication | Better Auth 1.7.18: Google OAuth + JWT cookie-cache session; email/password test login enabled only outside production |
 | Validation | zod 4 |
 | API Docs | OpenAPI 3.1 generated from zod schemas (`/api/openapi.json`) + interactive Swagger UI (`/api/docs`) |
-| AI | Gemini API (Flash series with `responseSchema`), key provided by Marcus Ramos in `GEMINI_API_KEY` |
+| AI | Gemini API (Flash series with `responseSchema`), key in `GEMINI_API_KEY` |
 | Real-Time | Pusher Channels |
 | Testing | Vitest 5 (unit & integration), Playwright 1.64 (E2E on desktop & mobile viewports) |
 | CI/CD | GitHub Actions + Vercel |
@@ -251,43 +247,41 @@ flowchart LR
 ## 11. AI Workflow (`AGENTS.md` & `docs/ai-usage.md`)
 
 - Primary AI IDE harness: **Antigravity** / **Claude Code**, governed by [`AGENTS.md`](../AGENTS.md).
-- Both partners (**Theodore Pei** and **Marcus Ramos**) maintain and commit updates to `AGENTS.md` across Sprint 1 and Sprint 2.
+- **Theodore Pei** maintains and commits updates to `AGENTS.md` across Sprint 1 and Sprint 2.
 - Prompt engineering patterns, AI failure modes, and rule updates are logged in `docs/ai-usage.md`.
 
 ## 12. Sprint Plan
 
-The project is organized into three milestones with clear ownership and cross-partner PR reviews:
+The project is organized into three milestones, all owned by **Theodore Pei**:
 
 - **[Sprint 1 Plan (`docs/sprints/sprint1.md`)](sprints/sprint1.md)** (**2026-11-07 – 2026-11-10**): Core foundation, CI/CD, authentication, households, split & settlement engine, manual expense recording, balances UI/API, and OpenAPI/Swagger skeleton.
-  - **Development Lead**: **Theodore Pei** (Issues `#1`–`#8`)
-  - **PR Review & Merge Lead**: **Marcus Ramos** (Reviews and approves Sprint 1 PRs)
+  - **Owner**: **Theodore Pei** (Issues `#1`–`#8`)
 - **[Sprint 2 Plan (`docs/sprints/sprint2.md`)](sprints/sprint2.md)** (**2026-11-10 – 2026-11-13**): AI receipt scanning, draft confirmation UI, real-time Pusher updates, public API Bearer tokens, preview E2E suite, UI polish, and final documentation.
-  - **Development Lead**: **Marcus Ramos** (Issues `#9`, `#10`, `#11`, `#13`, `#14`, `#15`, `#16`)
-  - **PR Review & Merge Lead**: **Theodore Pei** (Reviews and approves Sprint 2 PRs)
-- **Sprint 3 (Project Wrap-Up)**: End-to-end product demo video recording, individual reflections, final documentation review, and submission chores (**Theodore Pei** + **Marcus Ramos**).
+  - **Owner**: **Theodore Pei** (Issues `#9`, `#10`, `#11`, `#13`, `#14`, `#15`, `#16`)
+- **Sprint 3 (Project Wrap-Up)**: End-to-end product demo video recording, the reflection, final documentation review, and submission chores (**Theodore Pei**).
 
 ## 13. Deliverables Checklist
 
 | Deliverable | Location | Owner |
 |---|---|---|
-| README | `README.md` | Theodore Pei + Marcus Ramos |
-| Interactive API Docs & Guide | `/api/docs` + `docs/api.md` | Theodore Pei (`#8`) + Marcus Ramos (`#13`, `docs/api.md`) |
+| README | `README.md` | Theodore Pei |
+| Interactive API Docs & Guide | `/api/docs` + `docs/api.md` | Theodore Pei (`#8`, `#13`) |
 | Architecture Diagram | `docs/architecture.md` (Mermaid) | Theodore Pei |
-| Database Schema Diagram | `docs/schema.md` (Mermaid ER diagram) | Marcus Ramos |
-| Local Setup & Deployment Guide | `docs/setup.md` | Marcus Ramos |
-| Sprint Planning, Standups & Retrospectives | `docs/sprints/` | Theodore Pei + Marcus Ramos |
-| AI Usage Log | `docs/ai-usage.md` | Theodore Pei + Marcus Ramos |
-| Partner Contribution Log | `docs/contributions.md` | Theodore Pei + Marcus Ramos |
-| 10-Minute Demo Video | Linked in `README.md` | Theodore Pei + Marcus Ramos |
+| Database Schema Diagram | `docs/schema.md` (Mermaid ER diagram) | Theodore Pei |
+| Local Setup & Deployment Guide | `docs/setup.md` | Theodore Pei |
+| Sprint Planning, Standups & Retrospectives | `docs/sprints/` | Theodore Pei |
+| AI Usage Log | `docs/ai-usage.md` | Theodore Pei |
+| Contribution Log | `docs/contributions.md` | Theodore Pei |
+| 10-Minute Demo Video | Linked in `README.md` | Theodore Pei |
 | Production Deployment URL | `https://slashsplit.vercel.app` (in `README.md`) | Theodore Pei |
-| Individual 300-Word Reflection | Submitted individually on Canvas | Each partner separately |
+| 300-Word Reflection | Submitted on Canvas | Theodore Pei |
 
 ## 14. Risk Mitigation
 
 | Risk | Mitigation |
 |---|---|
 | AI receipt extraction inaccuracies | AI outputs only a `DRAFT` expense; manual editing and validation gate confirmation |
-| Tight schedule | Cut `#12` (monthly recurring rent cron) first; core app already exceeds 3+ distinct features |
+| Tight schedule | Scope is F1–F5 and F7; the core app already exceeds 3+ distinct features |
 | Playwright cannot automate Google OAuth login | Email/password test login enabled strictly when `NODE_ENV !== "production"` |
 | Floating-point rounding drift | All amounts stored and computed as integer cents (`*Cents`) with sum-assertion tests |
-| Unbalanced reviews or commits | Sprint 1 implemented by Theodore & reviewed by Marcus; Sprint 2 implemented by Marcus & reviewed by Theodore |
+| Unverified merges | An independent evaluator agent tests each behavior-changing PR against its acceptance criteria before merge |
