@@ -54,7 +54,7 @@ describe("/api/openapi.json", () => {
     });
   });
 
-  test.each(["/api/v1/tokens", "/api/v1/households"])(
+  test.each(["/api/v1/households"])(
     "POST %s documents a Bearer token request example (#13)",
     async (routePath) => {
       const doc = await (await getOpenApi()).json();
@@ -80,6 +80,22 @@ describe("/api/openapi.json", () => {
     expect(doc.paths?.["/api/v1/tokens"]?.post).toBeDefined();
     expect(doc.paths?.["/api/v1/tokens/{id}"]?.delete).toBeDefined();
     expect(doc.security).toEqual([{ bearerAuth: [] }]);
+  });
+
+  test("token routes require the session cookie and document 403 for a Bearer token (#13)", async () => {
+    const doc = await (await getOpenApi()).json();
+    expect(doc.components?.securitySchemes?.cookieAuth).toMatchObject({ type: "apiKey", in: "cookie" });
+    const operations = [
+      doc.paths?.["/api/v1/tokens"]?.get,
+      doc.paths?.["/api/v1/tokens"]?.post,
+      doc.paths?.["/api/v1/tokens/{id}"]?.delete,
+    ];
+    for (const operation of operations) {
+      expect(operation?.security).toEqual([{ cookieAuth: [] }]);
+      expect(operation?.responses?.["403"]?.description).toMatch(/Bearer/);
+    }
+    const samples: { source?: string }[] = doc.paths?.["/api/v1/tokens"]?.post?.["x-codeSamples"] ?? [];
+    expect(samples.map((s) => s.source).join("\n")).not.toMatch(/Authorization: Bearer/);
   });
 
   test("every /api/v1 route and HTTP method on disk is documented in paths", async () => {
