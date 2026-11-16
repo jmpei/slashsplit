@@ -33,3 +33,13 @@ Git author name: Jiaming Pei.
 ```
 
 Of the 98 commits, 37 are merge commits. The other 61 by type: `test` 25, `feat` 14, `docs` 8, `fix` 6, `ci` 4, `chore` 4.
+
+## Reviews and docs by Marcus Ramos
+
+Git author: Marcus Ramos (`marcusramos2024`). All on 2026-11-15.
+
+| PR | What | When |
+|---|---|---|
+| #42 | Review of the preview E2E trigger (open PR) | before merge |
+| #17, #18, #20, #21, #24, #25 | Review comments on the Sprint 1 PRs | after merge, labeled as post-merge |
+| this PR | `AGENTS.md` rule 12 (partner review), standup entries, this section | — |
