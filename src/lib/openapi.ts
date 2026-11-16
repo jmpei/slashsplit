@@ -335,6 +335,8 @@ export function buildOpenApiSpec() {
         },
         patch: {
           summary: "Update an expense and recompute member shares",
+          description:
+            "Confirmed expenses only. A DRAFT answers 409 and is left unchanged: send its edits with POST /api/v1/households/{id}/expenses/{eid}/confirm.",
           parameters: [idParam, eidParam],
           requestBody: {
             required: true,
@@ -347,6 +349,10 @@ export function buildOpenApiSpec() {
             },
             "400": {
               description: "Validation failed.",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
+            },
+            "409": {
+              description: "The expense is a draft; edit it through its confirm request.",
               content: { "application/json": { schema: jsonSchema(errorSchema) } },
             },
             "404": {

@@ -1,7 +1,14 @@
-// GET, PATCH, DELETE: one expense inside a household (#6). Members only.
+// GET, PATCH, DELETE: one expense inside a household (#6). Members only. PATCH refuses a DRAFT with
+// 409: drafts are edited through their confirm request (#10).
 import { expenseBody } from "@/lib/schemas/expenses";
-import { authorizeMember, badRequest, notFound, parseBody } from "@/server/api";
-import { deleteExpense, getExpense, updateExpense, ValidationError } from "@/server/expenses";
+import { authorizeMember, badRequest, conflict, notFound, parseBody } from "@/server/api";
+import {
+  ConflictError,
+  deleteExpense,
+  getExpense,
+  updateExpense,
+  ValidationError,
+} from "@/server/expenses";
 import { NotFoundError } from "@/server/households";
 
 type RouteParams = { params: Promise<{ id: string; eid: string }> };
@@ -29,6 +36,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   } catch (error) {
     if (error instanceof NotFoundError) return notFound(error.message);
     if (error instanceof ValidationError) return badRequest(error.message);
+    if (error instanceof ConflictError) return conflict(error.message);
     throw error;
   }
 }

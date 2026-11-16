@@ -9,6 +9,8 @@ export const buttonPrimary =
   "min-h-11 rounded-md bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200";
 export const buttonSecondary =
   "min-h-11 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-900 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800";
+export const buttonDanger =
+  "min-h-11 rounded-md border border-red-200 bg-red-50 px-4 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950";
 export const errorText = "min-h-5 text-sm text-red-700 dark:text-red-400";
 export const bodyText = "text-sm text-zinc-600 dark:text-zinc-400";
 export const h2 = "text-lg font-semibold tracking-tight";

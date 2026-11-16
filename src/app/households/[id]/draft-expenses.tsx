@@ -1,14 +1,16 @@
 "use client";
 // Receipt drafts (#10): scan a receipt into a DRAFT (#9 endpoint), then review it here. The editor
 // adds, edits and deletes items and taxes, compares items + taxes with the receipt total live, and
-// only enables "Confirm expense" when they match. Confirming calls the confirm endpoint.
-import { useRef, useState, useTransition } from "react";
+// only enables "Confirm expense" when they match. Confirming calls the confirm endpoint; "Discard
+// draft" deletes the draft through the DELETE expense endpoint after an inline confirmation.
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { compressionSteps, needsCompression } from "@/lib/receipt/compress";
 import { formatCents, parseDollarsToCents, type DraftEdits } from "@/lib/schemas/expenses";
 import type { ExpenseRecord } from "@/server/expenses";
 import type { Member } from "@/server/households";
 import {
+  buttonDanger,
   buttonPrimary,
   buttonSecondary,
   card,
@@ -451,6 +453,86 @@ function DraftEditor(props: { householdId: string; members: Member[]; draft: Exp
           Confirm expense
         </button>
       </div>
+      <DiscardDraft householdId={props.householdId} draftId={draft.id} />
     </form>
+  );
+}
+
+// "Discard draft" opens an inline confirmation; Escape or Cancel closes it and returns focus.
+function DiscardDraft(props: { householdId: string; draftId: string }) {
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState("");
+  const [pending, startTransition] = useTransition();
+  const discardRef = useRef<HTMLButtonElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const wasConfirming = useRef(false);
+
+  useEffect(() => {
+    if (confirming) cancelRef.current?.focus();
+    else if (wasConfirming.current) discardRef.current?.focus();
+    wasConfirming.current = confirming;
+  }, [confirming]);
+
+  useEffect(() => {
+    if (!confirming) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setConfirming(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [confirming]);
+
+  function discard() {
+    startTransition(async () => {
+      let failure: string | null;
+      try {
+        const res = await fetch(`/api/v1/households/${props.householdId}/expenses/${props.draftId}`, {
+          method: "DELETE",
+        });
+        failure = res.ok ? null : await errorMessage(res);
+      } catch {
+        failure = NETWORK_ERROR;
+      }
+      if (failure) {
+        setError(failure);
+        setConfirming(false);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {confirming ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm">Delete this draft? This cannot be undone.</span>
+          <button type="button" disabled={pending} onClick={discard} className={buttonDanger}>
+            Yes, discard
+          </button>
+          <button ref={cancelRef} type="button" onClick={() => setConfirming(false)} className={buttonSecondary}>
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div>
+          <button
+            ref={discardRef}
+            type="button"
+            onClick={() => {
+              setError("");
+              setConfirming(true);
+            }}
+            className={buttonSecondary}
+          >
+            Discard draft
+          </button>
+        </div>
+      )}
+      <p role="status" aria-live="polite" className="text-sm text-red-700 dark:text-red-400">
+        {error}
+      </p>
+    </div>
   );
 }
