@@ -30,6 +30,12 @@ export function authBaseURL(env: { BETTER_AUTH_URL?: string; VERCEL_URL?: string
   return env.VERCEL_URL ? `https://${env.VERCEL_URL}` : undefined;
 }
 
+// Vercel's branch alias (https://<project>-git-<branch>-<team>.vercel.app) serves the same preview
+// as VERCEL_URL; trust it too so signing in works on the link Vercel posts on the PR.
+export function authTrustedOrigins(env: { VERCEL_BRANCH_URL?: string }): string[] {
+  return env.VERCEL_BRANCH_URL ? [`https://${env.VERCEL_BRANCH_URL}`] : [];
+}
+
 function googleFromEnv(): AuthOptions["google"] {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -51,6 +57,7 @@ export function createAuth(options: AuthOptions = {}) {
         BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
         VERCEL_URL: process.env.VERCEL_URL,
       }),
+    trustedOrigins: authTrustedOrigins({ VERCEL_BRANCH_URL: process.env.VERCEL_BRANCH_URL }),
     database: prismaAdapter(prisma, { provider: "postgresql" }),
     emailAndPassword: { enabled: testLogin },
     // Better Auth would limit sign-in and sign-up to 3 per 10 s per IP on previews too (they run with
