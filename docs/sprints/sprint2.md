@@ -2,10 +2,7 @@
 
 - **Sprint Window**: 2026-11-10 (Tue) – 2026-11-13 (Fri)
 - **GitHub Milestone**: `Sprint 2`
-- **Team Members**: **Theodore Pei** & **Marcus Ramos**
-- **Workflow Division**:
-  - **Implementation Owner**: **Marcus Ramos** (develops Sprint 2 Issues `#9`, `#10`, `#11`, `#13`, `#14`, `#15`, `#16` across 5–6 separate PRs following strict Red → Green TDD, provides `GEMINI_API_KEY` for `#9`, and authors partner documentation and `AGENTS.md` v3)
-  - **PR Review & Verification Owner**: **Theodore Pei** (reviews, verifies acceptance criteria, and approves all Sprint 2 PRs before merge; manages Vercel/Neon deployment and architecture documentation)
+- **Owner**: **Theodore Pei** (implements, verifies and merges Issues `#9`, `#10`, `#11`, `#13`, `#14`, `#15`, `#16` following strict Red → Green TDD; manages the Vercel/Neon deployment and the documentation)
 
 ---
 
@@ -17,21 +14,21 @@ Add AI-powered receipt scanning into editable drafts with total-mismatch validat
 
 ## 2. Sprint 2 Backlog & Ownership
 
-| Issue | Title | Implementation Owner | Reviewer | Target Branch |
-|---|---|---|---|---|
-| `#9` | Receipt upload & Gemini AI extraction to `DRAFT` expense | Marcus Ramos | Theodore Pei | `feature/9-receipt-scan` |
-| `#10` | Draft receipt review page: mismatch highlight in red, edit & confirm | Marcus Ramos | Theodore Pei | `feature/10-draft-confirm` |
-| `#11` | Real-time balance updates with Pusher Channels | Marcus Ramos | Theodore Pei | `feature/11-realtime-pusher` |
-| `#13` | Personal API Bearer tokens (`/api/v1/tokens`) & OpenAPI completion | Marcus Ramos | Theodore Pei | `feature/13-api-tokens` |
-| `#14` | Full-journey Playwright E2E suite against preview/local environment | Marcus Ramos | Theodore Pei | `feature/14-e2e-suite` |
-| `#15` | PR preview environment configuration & database branch setup | Marcus Ramos | Theodore Pei | `chore/15-preview-env` |
-| `#16` | Mobile (360 px) & desktop (1280 px) UI polish, accessibility & docs | Marcus Ramos & Theodore Pei | Theodore Pei | `docs/16-ui-and-partner-docs` |
+| Issue | Title | Owner | Branch |
+|---|---|---|---|
+| `#9` | Receipt upload & Gemini AI extraction to `DRAFT` expense | Theodore Pei | `feature/9-receipt-scan` |
+| `#10` | Draft receipt review page: mismatch highlight in red, edit & confirm | Theodore Pei | `feature/10-draft-confirm` |
+| `#11` | Real-time balance updates with Pusher Channels | Theodore Pei | `feature/11-realtime-pusher` |
+| `#13` | Personal API Bearer tokens (`/api/v1/tokens`) & OpenAPI completion | Theodore Pei | `feature/13-api-tokens` |
+| `#14` | Full-journey Playwright E2E suite against preview/local environment | Theodore Pei | `feature/14-e2e-suite` |
+| `#15` | PR preview environment configuration & database branch setup | Theodore Pei | `chore/15-preview-env` |
+| `#16` | Mobile (360 px) & desktop (1280 px) UI polish, accessibility & docs | Theodore Pei | `docs/16-ui-and-docs` |
 
 ---
 
 ## 3. What Sprint 2 Delivers in Detail (PR Breakdown)
 
-Every feature PR below must follow `AGENTS.md` §3 (**Commit 1 = Red failing test commit `test(...)`**, **Commit 2 = Green implementation commit `feat(...)`**) and be merged with **Create a merge commit** after **Theodore Pei** reviews and approves it:
+Every feature PR below must follow `AGENTS.md` §2 rule 1 (**Commit 1 = Red failing test commit `test(...)`**, **Commit 2 = Green implementation commit `feat(...)`**) and be merged with **Create a merge commit** after an independent evaluator agent tests it against the issue's acceptance criteria:
 
 1. **PR 1 — Issue `#13`: Public API Bearer Tokens (`feature/13-api-tokens`)**
    - Add `ApiToken` model & migration (`id`, `userId`, `name`, `tokenHash`, `lastUsedAt`, `createdAt`). Store SHA-256 hash only; return the plain token once on creation.
@@ -50,7 +47,7 @@ Every feature PR below must follow `AGENTS.md` §3 (**Commit 1 = Red failing tes
    - Subscribe in the household balances view so roommates see updated balances within 3 seconds without refreshing.
 5. **PR 5 — Issues `#14` & `#15`: Preview Environment & Full E2E Suite (`feature/14-e2e-suite`)**
    - Configure preview environment support and a full end-to-end Playwright user journey covering sign-in, household creation & invite join, itemized expense splitting, balance check, and settlement.
-6. **PR 6 — Issue `#16` & Deliverables Package (`docs/16-ui-and-partner-docs`)**
-   - Mobile (360 px) & desktop (1280 px) UI polish + light/dark contrast verification.
-   - Update `AGENTS.md` to `v3` (committed by **Marcus Ramos** so both partners have commits on `AGENTS.md`).
+6. **PR 6 — Issue `#16`: UI Polish, Accessibility & Docs (`docs/16-ui-and-docs`)**
+   - Mobile (360 px) & desktop (1280 px) UI polish + light/dark contrast verification, empty states, error messages and keyboard access.
+   - Add the Sprint 2 rules, an accessibility rule and a changelog to `AGENTS.md`.
    - Complete `docs/schema.md` (Mermaid ER diagram), `docs/setup.md`, `docs/api.md`, `docs/architecture.md`, `docs/ai-usage.md`, `docs/contributions.md`, and Sprint 1 & 2 standups and retrospectives.

@@ -1,12 +1,11 @@
 "use client";
-// Create-a-household and join-with-a-code forms. Errors are announced in a status region.
+// Create-a-household and join-with-a-code forms. Errors, including a request that never reaches the
+// server, are announced in a status region.
+import { unstable_rethrow } from "next/navigation";
 import { useActionState } from "react";
+import { buttonPrimary, card, errorText, field, h2, label, NETWORK_ERROR } from "../ui";
 import { createHouseholdAction, joinHouseholdAction, type FormState } from "./actions";
 
-const field =
-  "min-h-11 w-full rounded-lg border border-foreground/20 bg-background px-3 text-base outline-none focus:border-foreground/60";
-const button =
-  "min-h-11 rounded-lg bg-foreground px-4 font-medium text-background disabled:opacity-50";
 const initial: FormState = { error: "" };
 
 function HouseholdForm(props: {
@@ -17,17 +16,28 @@ function HouseholdForm(props: {
   submit: string;
   autoCapitalize?: string;
 }) {
-  const [state, formAction, pending] = useActionState(props.action, initial);
+  const [state, formAction, pending] = useActionState(
+    async (prev: FormState, form: FormData): Promise<FormState> => {
+      try {
+        return await props.action(prev, form);
+      } catch (error) {
+        unstable_rethrow(error); // a successful create or join redirects by throwing
+        return { error: NETWORK_ERROR };
+      }
+    },
+    initial,
+  );
   return (
-    <form action={formAction} aria-label={props.formLabel} className="flex flex-col gap-2">
-      <label className="flex flex-col gap-1 text-sm">
+    <form action={formAction} aria-label={props.formLabel} className={card}>
+      <h2 className={h2}>{props.formLabel}</h2>
+      <label className={label}>
         {props.label}
         <input name={props.name} required className={field} autoCapitalize={props.autoCapitalize} />
       </label>
-      <button type="submit" className={button} disabled={pending}>
+      <button type="submit" className={buttonPrimary} disabled={pending}>
         {props.submit}
       </button>
-      <p role="status" className="min-h-5 text-sm text-red-600 dark:text-red-400">
+      <p role="status" aria-live="polite" className={errorText}>
         {state.error}
       </p>
     </form>
@@ -40,7 +50,10 @@ export function HouseholdForms() {
       <HouseholdForm
         action={createHouseholdAction}
         formLabel="Create a household"
-        label="Household name" name="name" submit="Create household" />
+        label="Household name"
+        name="name"
+        submit="Create household"
+      />
       <HouseholdForm
         action={joinHouseholdAction}
         formLabel="Join a household"

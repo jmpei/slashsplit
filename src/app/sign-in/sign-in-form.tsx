@@ -3,13 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth-client";
+import { buttonPrimary, buttonSecondary, card, errorText, field, label, NETWORK_ERROR } from "../ui";
 
-const field =
-  "min-h-11 w-full rounded-lg border border-foreground/20 bg-background px-3 text-base outline-none focus:border-foreground/60";
-const primary =
-  "min-h-11 w-full rounded-lg bg-foreground px-4 font-medium text-background disabled:opacity-50";
-const secondary =
-  "min-h-11 w-full rounded-lg border border-foreground/20 px-4 font-medium disabled:opacity-50";
+const primary = `${buttonPrimary} w-full`;
+const secondary = `${buttonSecondary} w-full`;
+
 
 export function SignInForm({ google, testLogin }: { google: boolean; testLogin: boolean }) {
   const router = useRouter();
@@ -22,10 +20,15 @@ export function SignInForm({ google, testLogin }: { google: boolean; testLogin: 
   async function run(action: () => Promise<{ error: { message?: string } | null }>) {
     setBusy(true);
     setError("");
-    const { error } = await action();
+    let result: Awaited<ReturnType<typeof action>>;
+    try {
+      result = await action();
+    } catch {
+      result = { error: { message: NETWORK_ERROR } };
+    }
     setBusy(false);
-    if (error) {
-      setError(error.message ?? "That didn’t work. Try again.");
+    if (result.error) {
+      setError(result.error.message ?? "That didn’t work. Try again.");
       return;
     }
     router.push("/households");
@@ -56,16 +59,16 @@ export function SignInForm({ google, testLogin }: { google: boolean; testLogin: 
           Continue with Google
         </button>
       )}
-      {!google && !testLogin && <p>Sign-in isn’t set up yet.</p>}
+      {!google && !testLogin && <p className="text-sm text-zinc-600 dark:text-zinc-400">Sign-in isn’t set up yet.</p>}
 
       {testLogin && (
-        <form onSubmit={signIn} className="flex flex-col gap-3 rounded-xl border border-foreground/15 p-4">
-          <p className="text-sm text-foreground/70">Test login. Not available in production.</p>
-          <label className="flex flex-col gap-1 text-sm">
+        <form onSubmit={signIn} className={card}>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Test login. Not available in production.</p>
+          <label className={label}>
             Name
             <input className={field} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
           </label>
-          <label className="flex flex-col gap-1 text-sm">
+          <label className={label}>
             Email
             <input
               className={field}
@@ -76,7 +79,7 @@ export function SignInForm({ google, testLogin }: { google: boolean; testLogin: 
               autoComplete="email"
             />
           </label>
-          <label className="flex flex-col gap-1 text-sm">
+          <label className={label}>
             Password
             <input
               className={field}
@@ -97,7 +100,7 @@ export function SignInForm({ google, testLogin }: { google: boolean; testLogin: 
         </form>
       )}
 
-      <p aria-live="polite" className="min-h-6 text-sm text-red-600 dark:text-red-400">
+      <p role="status" aria-live="polite" className={errorText}>
         {error}
       </p>
     </div>

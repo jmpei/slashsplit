@@ -5,7 +5,7 @@
 Split shared bills with roommates, item by item. Snap a receipt, slash the items someone didn’t share,
 and see who owes whom and the fewest transfers to settle up.
 
-CS6983 Project 2 (pair project). Plan, user stories, split rules and sprints: [`docs/PLAN.md`](docs/PLAN.md).
+CS6983 Project 2, built by Theodore Pei. Plan, user stories, split rules and sprints: [`docs/PLAN.md`](docs/PLAN.md).
 Rules for AI agents and contributors: [`AGENTS.md`](AGENTS.md).
 
 **Production:** https://slashsplit.vercel.app (Vercel + Neon Postgres; every merge to `main` deploys).

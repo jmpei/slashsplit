@@ -6,10 +6,9 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { auth } from "@/server/auth";
 import { listTokens } from "@/server/tokens";
+import { card } from "../../ui";
 import { CreateTokenForm, RevokeTokenButton } from "./token-forms";
 
-const card =
-  "flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900";
 const dateFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
 async function TokensContent() {
@@ -49,12 +48,12 @@ async function TokensContent() {
 
 export default function TokensPage() {
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 px-4 py-10">
-      <Link href="/households" className="text-sm text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6">
+      <Link href="/households" className="w-fit text-sm text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400">
         ← Households
       </Link>
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-semibold tracking-tight">API tokens</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">API tokens</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Send a token as <code className="font-mono text-xs">Authorization: Bearer ss_…</code> to call the{" "}
           <Link href="/api/docs" className="underline underline-offset-4">

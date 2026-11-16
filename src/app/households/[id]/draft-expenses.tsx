@@ -8,16 +8,17 @@ import { compressionSteps, needsCompression } from "@/lib/receipt/compress";
 import { formatCents, parseDollarsToCents, type DraftEdits } from "@/lib/schemas/expenses";
 import type { ExpenseRecord } from "@/server/expenses";
 import type { Member } from "@/server/households";
-
-const card =
-  "flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900";
-const field =
-  "min-h-11 w-full rounded-md border border-zinc-200 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100";
-const buttonPrimary =
-  "min-h-11 rounded-md bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900";
-const buttonSecondary =
-  "min-h-11 rounded-md border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100";
-const chip = "flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-3 text-xs font-medium";
+import {
+  buttonPrimary,
+  buttonSecondary,
+  card,
+  chipIncluded,
+  chipPlain,
+  chipSlashed,
+  errorText,
+  field,
+  NETWORK_ERROR,
+} from "../../ui";
 
 // Integer cents to an editable dollar string ("12.05"), without floats.
 function centsToInput(cents: number): string {
@@ -32,6 +33,18 @@ function toggle<T>(list: T[], value: T): T[] {
 async function errorMessage(res: Response): Promise<string> {
   const body = await res.json().catch(() => null);
   return body?.error ?? "Something went wrong. Try again.";
+}
+
+// POSTs to the API; returns the error to show, or null on success. A request that never reaches the
+// server (offline, DNS, CORS) becomes NETWORK_ERROR instead of an unhandled rejection.
+async function post(url: string, init: RequestInit): Promise<string | null> {
+  let res: Response;
+  try {
+    res = await fetch(url, { method: "POST", ...init });
+  } catch {
+    return NETWORK_ERROR;
+  }
+  return res.ok ? null : errorMessage(res);
 }
 
 // Vercel rejects request bodies above about 4.5 MB before the scan route runs (#9), so a photo over
@@ -121,12 +134,9 @@ function ScanForm(props: { householdId: string }) {
         return;
       }
       data.set("file", upload);
-      const res = await fetch(`/api/v1/households/${props.householdId}/receipts/scan`, {
-        method: "POST",
-        body: data,
-      });
-      if (!res.ok) {
-        setError(await errorMessage(res));
+      const failure = await post(`/api/v1/households/${props.householdId}/receipts/scan`, { body: data });
+      if (failure) {
+        setError(failure);
         return;
       }
       form.reset();
@@ -147,14 +157,16 @@ function ScanForm(props: { householdId: string }) {
         />
       </label>
       <p className="text-xs text-zinc-600 dark:text-zinc-400">
-        JPG, PNG, HEIC or WebP up to 10 MB. The scan becomes a draft you review before it counts.
+        JPG, PNG, HEIC or WebP up to 10 MB. Photos over 4 MB are shrunk in your browser before upload;
+        a HEIC photo over 4 MB can only be shrunk in Safari, so elsewhere save it as a JPG first. The
+        scan becomes a draft you review before it counts.
       </p>
       <div>
         <button type="submit" disabled={pending} className={buttonPrimary}>
           Scan receipt
         </button>
       </div>
-      <p role="status" aria-live="polite" className="min-h-5 text-sm text-red-700 dark:text-red-400">
+      <p role="status" aria-live="polite" className={errorText}>
         {error}
       </p>
     </form>
@@ -246,12 +258,12 @@ function DraftEditor(props: { householdId: string; members: Member[]; draft: Exp
       taxes: taxes.map((tax, i) => ({ code: tax.code, amountCents: taxCents[i]! })),
     };
     startTransition(async () => {
-      const res = await fetch(
-        `/api/v1/households/${props.householdId}/expenses/${draft.id}/confirm`,
-        { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(edits) },
-      );
-      if (!res.ok) {
-        setError(await errorMessage(res));
+      const failure = await post(`/api/v1/households/${props.householdId}/expenses/${draft.id}/confirm`, {
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(edits),
+      });
+      if (failure) {
+        setError(failure);
         return;
       }
       router.refresh();
@@ -330,11 +342,7 @@ function DraftEditor(props: { householdId: string; members: Member[]; draft: Exp
               return (
                 <label
                   key={m.userId}
-                  className={`${chip} ${
-                    checked
-                      ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
-                      : "border-zinc-300 bg-white text-zinc-400 line-through dark:border-zinc-700 dark:bg-zinc-900"
-                  }`}
+                  className={checked ? chipIncluded : chipSlashed}
                 >
                   <input
                     type="checkbox"
@@ -354,7 +362,7 @@ function DraftEditor(props: { householdId: string; members: Member[]; draft: Exp
               {taxes.map((tax, t) => (
                 <label
                   key={tax.key}
-                  className={`${chip} border-zinc-200 text-zinc-900 dark:border-zinc-800 dark:text-zinc-100`}
+                  className={chipPlain}
                 >
                   <input
                     type="checkbox"
@@ -436,7 +444,7 @@ function DraftEditor(props: { householdId: string; members: Member[]; draft: Exp
       </p>
 
       <div className="flex flex-col gap-2 border-t border-zinc-200 pt-3 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
-        <p role="status" aria-live="polite" className="min-h-5 text-sm text-red-700 dark:text-red-400">
+        <p role="status" aria-live="polite" className={errorText}>
           {error || problem}
         </p>
         <button type="submit" disabled={pending || !!problem || mismatch} className={buttonPrimary}>

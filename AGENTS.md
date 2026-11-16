@@ -3,7 +3,7 @@
 > Concise root instruction map following [Claude Code Best Practices](https://code.claude.com/docs/en/best-practices) and [Claude Prompting Best Practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices). Detailed domain rules live in `.claude/rules/`.
 
 <context>
-**SlashSplit** (`jmpei/slashsplit`) is a roommate expense-splitting web app built by **Theodore Pei** (Sprint 1 `#1`–`#8`) and **Marcus Ramos** (Sprint 2 `#9`–`#16`).
+**SlashSplit** (`jmpei/slashsplit`) is a roommate expense-splitting web app built by **Theodore Pei** (Sprint 1 `#1`–`#8`, Sprint 2 `#9`–`#16`).
 - **Stack:** Next.js `16.4.3` (App Router, TypeScript strict), React `19.3`, Tailwind CSS `4`, PostgreSQL `17` + Prisma `7.10.1` (`@prisma/adapter-pg`), Better Auth `1.7.18`, `zod` `4`, Vitest `5`, Playwright `1.64`.
 - **Precedence:** This file and `.claude/rules/*.md` override any global/home `CLAUDE.md`.
 </context>
@@ -31,7 +31,12 @@ npm run test:e2e                                 # Playwright E2E suite (port 31
 3. **Money is integer cents (`*Cents`):** Never use floats, `parseFloat`, or `toFixed` on money; use `allocate()` (Largest Remainder, `src/lib/split/allocate.ts`) and `formatCents()`.
 4. **Prisma 7 & layer boundary:** Import Prisma strictly from `@/generated/prisma/client` (never `@prisma/client`) and only inside `src/server/`. Route handlers in `src/app/api/v1/` only parse with `zod`, call `authorizeMember(request, householdId)` (`403` for non-members), and call `src/server/`.
 5. **OpenAPI parity guard:** Register every `/api/v1` route in `src/lib/openapi.ts` (`tests/unit/openapi.test.ts` enforces 100% route parity in CI).
-6. **Untrusted AI & zero live API calls in tests:** Store Gemini receipt parses as `status: "DRAFT"` until confirmed; inject fixtures from `tests/fixtures/receipts/` in all tests.
+6. **Untrusted AI & zero live API calls in tests:** Store Gemini receipt parses as `status: "DRAFT"` until confirmed. Unit, integration and E2E tests inject receipt fixtures from `tests/fixtures/receipts/` (`RECEIPT_EXTRACTOR=fixture:<name>`) and never call Gemini.
+7. **API tokens are stored as hashes only:** Persist only the SHA-256 hex of a personal API token (`src/server/tokens.ts`); the plaintext `ss_...` value is shown once at creation and never stored or logged.
+8. **Real-time is optional and members-only:** Without Pusher env vars, or when the socket drops, the household page falls back to polling `/version` every 2 s. `/api/pusher/auth` signs `private-household-<id>` only for members of that household.
+9. **Previews use their own Neon branch:** Every PR preview runs on its own Neon database branch; `scripts/vercel-build.mjs` migrates a preview only when none of its database URLs points at the production host.
+10. **Accessibility:** Every action is reachable with Tab and Enter, every focused control shows the visible focus ring (never `outline-none`), every input has a label, status and error messages live in `role="status"`, and text contrast is at least 4.5:1 in light and dark (`e2e/ui-polish.spec.ts`).
+11. **No new npm dependencies without a stated reason:** A PR that adds a package names in its body what it does that existing code or the platform cannot.
 </invariants>
 
 <scoped_rules>
@@ -46,6 +51,10 @@ Load these files when working in their respective areas:
   or setup and configuration steps, without being asked. Exception: Next.js — read
   `node_modules/next/dist/docs/` (exact installed version; see the block below).
 </scoped_rules>
+
+## Changelog
+
+- **2026-11-15** — Sprint 2 rules: receipt tests use fixtures and never call Gemini; API tokens stored as SHA-256 hashes; real-time falls back to polling and only members may subscribe; previews run on their own Neon branch. Added the accessibility rule and the no-new-dependencies rule.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

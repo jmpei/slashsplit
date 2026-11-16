@@ -1,17 +1,34 @@
 "use client";
 // Expense entry form (#6): itemized by default (every member ticked on every item; untick to slash),
 // or click "Split equally" to divide the whole bill evenly. Each item ticks the taxes it carries.
+import { unstable_rethrow } from "next/navigation";
 import { useState, useTransition } from "react";
 import { formatCents, localCalendarDay, parseDollarsToCents } from "@/lib/schemas/expenses";
 import type { Member } from "@/server/households";
+import {
+  buttonPrimary,
+  buttonSecondary,
+  card,
+  chipIncluded,
+  chipPlain,
+  chipSlashed,
+  errorText,
+  field,
+  h2,
+  label,
+  NETWORK_ERROR,
+} from "../../ui";
 import { recordExpensePayloadAction } from "./actions";
 
-const field =
-  "min-h-11 w-full rounded-lg border border-foreground/20 bg-background px-3 text-base outline-none focus:border-foreground/60";
-const buttonPrimary =
-  "min-h-11 rounded-lg bg-foreground px-4 font-medium text-background disabled:opacity-50";
-const buttonSecondary =
-  "min-h-11 rounded-lg border border-foreground/20 px-3 text-sm font-medium hover:bg-foreground/5 disabled:opacity-50";
+// Runs a server action; a request that never reaches the server comes back as an error message.
+async function send(run: () => Promise<{ error?: string }>): Promise<{ error?: string }> {
+  try {
+    return await run();
+  } catch (error) {
+    unstable_rethrow(error);
+    return { error: NETWORK_ERROR };
+  }
+}
 
 type DraftItem = {
   name: string;
@@ -99,16 +116,18 @@ export function ExpenseForm(props: {
         return;
       }
       startTransition(async () => {
-        const res = await recordExpensePayloadAction(props.householdId, {
-          payerId,
-          merchant,
-          date,
-          splitMode: "EQUAL",
-          totalCents,
-          items: [],
-          taxes: [],
-          weights: [],
-        });
+        const res = await send(() =>
+          recordExpensePayloadAction(props.householdId, {
+            payerId,
+            merchant,
+            date,
+            splitMode: "EQUAL",
+            totalCents,
+            items: [],
+            taxes: [],
+            weights: [],
+          }),
+        );
         if (res.error) {
           setError(res.error);
           return;
@@ -161,16 +180,18 @@ export function ExpenseForm(props: {
       parsedTaxes.reduce((a, t) => a + t.amountCents, 0);
 
     startTransition(async () => {
-      const res = await recordExpensePayloadAction(props.householdId, {
-        payerId,
-        merchant,
-        date,
-        splitMode: "ITEMIZED",
-        totalCents,
-        items: parsedItems,
-        taxes: parsedTaxes,
-        weights: [],
-      });
+      const res = await send(() =>
+        recordExpensePayloadAction(props.householdId, {
+          payerId,
+          merchant,
+          date,
+          splitMode: "ITEMIZED",
+          totalCents,
+          items: parsedItems,
+          taxes: parsedTaxes,
+          weights: [],
+        }),
+      );
       if (res.error) {
         setError(res.error);
         return;
@@ -185,15 +206,15 @@ export function ExpenseForm(props: {
     <form
       onSubmit={handleSubmit}
       aria-label="Record an expense"
-      className="flex flex-col gap-4 rounded-xl border border-foreground/15 p-4"
+      className={card}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-medium">Record an expense</h2>
+        <h2 className={h2}>Record an expense</h2>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setSplitMode("ITEMIZED")}
-            className={buttonSecondary}
+            className={splitMode === "ITEMIZED" ? buttonPrimary : buttonSecondary}
             aria-pressed={splitMode === "ITEMIZED"}
           >
             Itemized
@@ -201,7 +222,7 @@ export function ExpenseForm(props: {
           <button
             type="button"
             onClick={() => setSplitMode("EQUAL")}
-            className={buttonSecondary}
+            className={splitMode === "EQUAL" ? buttonPrimary : buttonSecondary}
             aria-pressed={splitMode === "EQUAL"}
           >
             Split equally
@@ -210,7 +231,7 @@ export function ExpenseForm(props: {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="flex flex-col gap-1 text-sm">
+        <label className={label}>
           Payer
           <select
             name="payerId"
@@ -225,7 +246,7 @@ export function ExpenseForm(props: {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className={label}>
           Merchant
           <input
             name="merchant"
@@ -235,7 +256,7 @@ export function ExpenseForm(props: {
             className={field}
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className={label}>
           Date
           <input
             type="date"
@@ -249,7 +270,7 @@ export function ExpenseForm(props: {
       </div>
 
       {splitMode === "EQUAL" ? (
-        <label className="flex flex-col gap-1 text-sm">
+        <label className={label}>
           Total ($)
           <input
             name="total"
@@ -257,7 +278,7 @@ export function ExpenseForm(props: {
             value={equalTotalDollars}
             onChange={(e) => setEqualTotalDollars(e.target.value)}
             required
-            className={field}
+            className={`${field} tabular-nums`}
           />
         </label>
       ) : (
@@ -266,13 +287,13 @@ export function ExpenseForm(props: {
             {items.map((item, idx) => (
               <fieldset
                 key={idx}
-                className="flex flex-col gap-2 rounded-lg border border-foreground/15 p-3"
+                className="flex flex-col gap-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
               >
-                <legend className="px-1 text-xs font-medium text-foreground/70">
+                <legend className="px-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
                   {`Item ${idx + 1}`}
                 </legend>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <label className="flex flex-col gap-1 text-sm">
+                  <label className={label}>
                     Item name
                     <input
                       value={item.name}
@@ -285,7 +306,7 @@ export function ExpenseForm(props: {
                       className={field}
                     />
                   </label>
-                  <label className="flex flex-col gap-1 text-sm">
+                  <label className={label}>
                     Price ($)
                     <input
                       inputMode="decimal"
@@ -298,7 +319,7 @@ export function ExpenseForm(props: {
                         )
                       }
                       required
-                      className={field}
+                      className={`${field} tabular-nums`}
                     />
                   </label>
                 </div>
@@ -308,11 +329,7 @@ export function ExpenseForm(props: {
                     return (
                       <label
                         key={m.userId}
-                        className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm ${
-                          checked
-                            ? "border-foreground/40 bg-foreground/5"
-                            : "border-foreground/15 text-foreground/50 line-through"
-                        }`}
+                        className={checked ? chipIncluded : chipSlashed}
                       >
                         <input
                           type="checkbox"
@@ -326,24 +343,20 @@ export function ExpenseForm(props: {
                 </div>
                 {taxes.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-medium text-foreground/70">Taxes</span>
+                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Taxes</span>
                     {taxes.map((tax, taxRow) => {
                       const checked = item.taxRows.includes(taxRow);
                       return (
                         <label
                           key={taxRow}
-                          className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm ${
-                            checked
-                              ? "border-foreground/40 bg-foreground/5"
-                              : "border-foreground/15 text-foreground/50"
-                          }`}
+                          className={chipPlain}
                         >
                           <input
                             type="checkbox"
                             checked={checked}
                             onChange={() => toggleTax(idx, taxRow)}
                           />
-                          {tax.code.trim() || `Tax ${taxRow + 1}`}
+                          <span className="font-mono">{tax.code.trim() || `Tax ${taxRow + 1}`}</span>
                         </label>
                       );
                     })}
@@ -355,7 +368,7 @@ export function ExpenseForm(props: {
 
           {taxes.map((tax, idx) => (
             <div key={idx} className="grid gap-2 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm">
+              <label className={label}>
                 Tax code
                 <input
                   value={tax.code}
@@ -364,10 +377,10 @@ export function ExpenseForm(props: {
                       prev.map((t, i) => (i === idx ? { ...t, code: e.target.value } : t)),
                     )
                   }
-                  className={field}
+                  className={`${field} font-mono`}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-sm">
+              <label className={label}>
                 Tax ($)
                 <input
                   inputMode="decimal"
@@ -379,7 +392,7 @@ export function ExpenseForm(props: {
                       ),
                     )
                   }
-                  className={field}
+                  className={`${field} tabular-nums`}
                 />
               </label>
             </div>
@@ -396,14 +409,14 @@ export function ExpenseForm(props: {
         </>
       )}
 
-      <div className="flex items-center justify-between border-t border-foreground/10 pt-3">
-        <span className="text-sm font-medium">Total: {formatCents(computedTotalCents)}</span>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <span className="text-sm font-semibold tabular-nums">Total: {formatCents(computedTotalCents)}</span>
         <button type="submit" disabled={pending} className={buttonPrimary}>
           Save expense
         </button>
       </div>
 
-      <p role="status" aria-live="polite" className="min-h-5 text-sm text-red-600 dark:text-red-400">
+      <p role="status" aria-live="polite" className={errorText}>
         {error}
       </p>
     </form>
