@@ -29,7 +29,7 @@ pooled `DATABASE_URL`.
 
 ## Environment variables
 
-Names only; values never go in the repo. All but the Vercel-only rows are in `.env.example`.
+Names only; values never go in the repo. All but the Vercel-only and CI-only rows are in `.env.example`.
 
 | Variable | Local | CI | Preview | Production |
 |---|---|---|---|---|
@@ -44,6 +44,7 @@ Names only; values never go in the repo. All but the Vercel-only rows are in `.e
 | `PUSHER_APP_ID`, `PUSHER_SECRET`, `NEXT_PUBLIC_PUSHER_KEY`, `NEXT_PUBLIC_PUSHER_CLUSTER` | `.env` (optional) | not set | Vercel env (optional) | Vercel env (optional) |
 | `E2E_BASE_URL` | `.env` (empty for localhost) | GitHub Actions, when E2E targets a preview | not set | not set |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | `.env` | GitHub Actions secret | not set (Vercel holds the bypass) | not set |
+| `VERCEL_TOKEN` (CI-only) | not set | GitHub Actions secret: Vercel access token that `e2e-preview.yml` uses to find the PR's preview deployment | not set | not set |
 | `DATABASE_URL_UNPOOLED` (Vercel-only) | not set | not set | Neon integration | not set |
 | `PRODUCTION_DB_HOST` (Vercel-only) | not set | not set | Vercel env: production Neon endpoint host (not a secret) | not set |
 | `VERCEL_ENV`, `VERCEL_URL` (Vercel system) | not set | not set | Vercel | Vercel |
