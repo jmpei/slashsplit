@@ -7,10 +7,22 @@ function isUnique(ids: string[]): boolean {
   return new Set(ids).size === ids.length;
 }
 
+// True for a real YYYY-MM-DD day: 2026-02-30 and 2026-13-45 are not.
+export function isCalendarDay(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const [year, month, day] = match.slice(1).map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
+}
+
 const calendarDay = z
   .string()
   .trim()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a YYYY-MM-DD date.");
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a YYYY-MM-DD date.")
+  .refine(isCalendarDay, "Use a real calendar date.");
 
 export const expenseItemSchema = z.object({
   name: z.string().trim().min(1, "Give every item a name.").max(100),
@@ -41,7 +53,7 @@ export const expenseBody = z.object({
     .max(100, "Keep the merchant name under 100 characters."),
   date: calendarDay,
   splitMode: z.enum(["ITEMIZED", "EQUAL", "RATIO"]).default("ITEMIZED"),
-  totalCents: z.number().int("Total must be whole cents."),
+  totalCents: z.number().int("Total must be whole cents.").min(0, "Total cannot be negative."),
   items: z.array(expenseItemSchema).default([]),
   taxes: z.array(expenseTaxSchema).default([]),
   weights: z

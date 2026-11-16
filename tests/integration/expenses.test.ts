@@ -1,7 +1,7 @@
 // Expenses API (#6) through real route handlers and Postgres: itemized, equal and ratio splits,
 // listing, viewing, editing, deleting, and 401/403 access checks.
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { auth } from "@/server/auth";
 import { POST as createHousehold } from "@/app/api/v1/households/route";
 import { POST as joinHousehold } from "@/app/api/v1/households/join/route";
@@ -318,6 +318,54 @@ describe("recording and managing expenses", () => {
               participantIds: [ada.userId, ada.userId, bo.userId],
             },
           ],
+          taxes: [],
+        },
+      }),
+      householdParams(houseId),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test("rejects an impossible calendar date on create and on edit", async () => {
+    const valid = {
+      payerId: ada.userId,
+      merchant: "Calendar",
+      date: "2026-11-08",
+      splitMode: "EQUAL",
+      totalCents: 300,
+    };
+    const res = await createExpense(
+      request(`/api/v1/households/${houseId}/expenses`, ada, { body: { ...valid, date: "2026-13-45" } }),
+      householdParams(houseId),
+    );
+    expect(res.status).toBe(400);
+
+    const created = await createExpense(
+      request(`/api/v1/households/${houseId}/expenses`, ada, { body: valid }),
+      householdParams(houseId),
+    );
+    expect(created.status).toBe(201);
+    const { id } = await created.json();
+    const patch = await updateExpense(
+      request(`/api/v1/households/${houseId}/expenses/${id}`, ada, {
+        method: "PATCH",
+        body: { ...valid, date: "2026-02-30" },
+      }),
+      expenseParams(houseId, id),
+    );
+    expect(patch.status).toBe(400);
+  });
+
+  test("rejects a negative total", async () => {
+    const res = await createExpense(
+      request(`/api/v1/households/${houseId}/expenses`, ada, {
+        body: {
+          payerId: ada.userId,
+          merchant: "Negative",
+          date: "2026-11-08",
+          splitMode: "ITEMIZED",
+          totalCents: -500,
+          items: [{ name: "Refund", priceCents: -500, taxCodes: [], participantIds: [ada.userId] }],
           taxes: [],
         },
       }),

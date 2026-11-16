@@ -5,9 +5,8 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { auth } from "@/server/auth";
 import { listHouseholds } from "@/server/households";
-import { bodyText, buttonSecondary } from "../ui";
+import { bodyText } from "../ui";
 import { HouseholdForms } from "./household-forms";
-import { SignOutButton } from "./sign-out-button";
 
 async function HouseholdsContent() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -15,15 +14,7 @@ async function HouseholdsContent() {
   const households = await listHouseholds(session.user.id);
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className={bodyText}>Signed in as {session.user.name}</p>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/settings/tokens" className={`${buttonSecondary} flex items-center`}>
-            API tokens
-          </Link>
-          <SignOutButton />
-        </div>
-      </div>
+      <p className={bodyText}>Signed in as {session.user.name}</p>
       {households.length === 0 ? (
         <p className={bodyText}>You’re not in a household yet. Create one or join with a code.</p>
       ) : (

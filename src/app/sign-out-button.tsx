@@ -2,7 +2,7 @@
 // Ends the session (deletes the Session row and clears the cookies), then goes to sign-in.
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { buttonSecondary } from "../ui";
+import { buttonSecondary } from "./ui";
 
 export function SignOutButton() {
   const router = useRouter();

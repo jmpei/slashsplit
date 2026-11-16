@@ -42,3 +42,41 @@ test("create a token, see it once, revoke it", async ({ page }, info) => {
   const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 });
+
+test("a revoke that never reaches the server resets the button and shows the error", async ({ page }, info) => {
+  const tag = `${info.project.name}-${Date.now()}`;
+  await page.goto("/sign-in");
+  await page.getByLabel("Name").fill("Rex");
+  await page.getByLabel("Email").fill(`e2e-rex-${tag}@test.slashsplit.dev`);
+  await page.getByLabel("Password").fill("correct-horse-battery");
+  await page.getByRole("button", { name: "Create test account" }).click();
+  await expect(page).toHaveURL(/\/households$/);
+  await page.goto("/settings/tokens");
+  await page.getByLabel("Token name").fill("Flaky network");
+  await page.getByRole("button", { name: "Create token" }).click();
+  await expect(page.getByTestId("new-token")).toBeVisible();
+
+  const row = page.getByRole("list", { name: "Your API tokens" }).getByRole("listitem");
+  // The status region is mounted before anything fails, so a screen reader announces the error.
+  const status = row.getByRole("status");
+  await expect(status).toHaveCount(1);
+  await expect(status).toHaveText("");
+
+  // Server actions POST to the page URL; drop them as if the connection had gone.
+  await page.route("**/settings/tokens", (route) =>
+    route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue(),
+  );
+  await row.getByRole("button", { name: "Revoke Flaky network" }).click();
+  await row.getByRole("button", { name: "Yes, revoke" }).click();
+
+  const revoke = row.getByRole("button", { name: "Revoke Flaky network" });
+  await expect(revoke).toBeEnabled();
+  await expect(revoke).toBeFocused();
+  await expect(status).toHaveText(/couldn.t reach the server/i);
+
+  // After the connection returns, the same button revokes the token.
+  await page.unroute("**/settings/tokens");
+  await revoke.click();
+  await row.getByRole("button", { name: "Yes, revoke" }).click();
+  await expect(page.getByText("No API tokens yet.")).toBeVisible();
+});

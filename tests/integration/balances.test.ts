@@ -1,7 +1,7 @@
 // Balances, settlement plan and recording a transfer (#7) through the real route handlers and
 // Postgres, including the PLAN §5.6 example (A +2000, B −500, C −1500 → C pays A 1500, B pays A 500).
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { auth } from "@/server/auth";
 import { POST as createHousehold } from "@/app/api/v1/households/route";
 import { POST as joinHousehold } from "@/app/api/v1/households/join/route";

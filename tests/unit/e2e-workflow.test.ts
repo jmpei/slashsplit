@@ -73,6 +73,9 @@ describe("e2e-preview.yml", () => {
       expect(step).toContain("/api/health");
       expect(step).toMatch(/<title>/);
       expect(step).toMatch(/exit 1/);
+      // A redirect (for example to Vercel's login page) must fail the check, not just a non-200.
+      expect(step).toContain("%{url_effective}");
+      expect(step).toContain('[ "$host" != "${E2E_BASE_URL#https://}" ]');
       expect(step, "never dumps response headers or cookies").not.toMatch(/ -D | -i | -v |--include|--verbose/);
     });
 

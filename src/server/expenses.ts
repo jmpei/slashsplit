@@ -1,6 +1,6 @@
 // Expense service (#6): create, list, view, edit and delete expenses inside a household.
 // Computes shares through the pure split functions in src/lib/split/ and stores plain integer cents.
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import type { DraftEdits, ExpenseInput } from "@/lib/schemas/expenses";
 import { splitByRatio, splitEqual, splitItemized, type Share } from "@/lib/split/split-expense";
 import { bumpHouseholdVersion, listMembers, NotFoundError } from "@/server/households";
@@ -245,6 +245,10 @@ export async function updateExpense(
     where: { id: expenseId, householdId },
   });
   if (!existing) throw new NotFoundError("Expense not found.");
+  // A draft gets its edits through confirmExpense, which also writes shares and clears scanError.
+  if (existing.status === "DRAFT") {
+    throw new ConflictError("This expense is a draft. Send your edits with its confirm request instead.");
+  }
 
   const members = await listMembers(householdId);
   const memberIds = members.map((m) => m.userId);

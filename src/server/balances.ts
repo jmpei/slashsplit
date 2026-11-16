@@ -1,6 +1,6 @@
 // Balances and settlement service (#7): loads household members, confirmed expenses and recorded
 // transfers from Postgres and feeds them to the pure functions in src/lib/split/balances.ts.
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import type { RecordSettlementInput } from "@/lib/schemas/settlements";
 import { computeBalances, planSettlement, type Balance, type Transfer } from "@/lib/split/balances";
 import { ValidationError } from "@/server/expenses";

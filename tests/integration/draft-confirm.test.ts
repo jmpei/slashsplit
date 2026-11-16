@@ -1,13 +1,17 @@
 // Confirming a receipt draft (#10) through the real route handlers and Postgres. Drafts come from the
 // scan endpoint with fixture extractors (RECEIPT_EXTRACTOR=fixture:<name>), so no test calls Gemini.
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { auth } from "@/server/auth";
 import { POST as createHousehold } from "@/app/api/v1/households/route";
 import { POST as joinHousehold } from "@/app/api/v1/households/join/route";
 import { GET as getBalances } from "@/app/api/v1/households/[id]/balances/route";
 import { GET as listExpenses } from "@/app/api/v1/households/[id]/expenses/route";
-import { GET as getExpense } from "@/app/api/v1/households/[id]/expenses/[eid]/route";
+import {
+  DELETE as deleteExpense,
+  GET as getExpense,
+  PATCH as updateExpense,
+} from "@/app/api/v1/households/[id]/expenses/[eid]/route";
 import { POST as confirmDraft } from "@/app/api/v1/households/[id]/expenses/[eid]/confirm/route";
 import { POST as scanReceipt } from "@/app/api/v1/households/[id]/receipts/scan/route";
 
@@ -284,5 +288,44 @@ describe("listing expenses by status", () => {
       householdParams(houseId),
     );
     expect(res.status).toBe(400);
+  });
+});
+
+describe("editing or discarding a draft outside confirm", () => {
+  test("PATCH on a DRAFT answers 409 and leaves the draft untouched", async () => {
+    const draftId = await scanDraft("costco");
+    const before = await fetchExpense(draftId);
+    const res = await updateExpense(
+      new Request(`http://localhost:3100/api/v1/households/${houseId}/expenses/${draftId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", cookie: ada.cookie },
+        body: JSON.stringify({
+          payerId: ada.userId,
+          merchant: "Edited",
+          date: "2026-11-02",
+          splitMode: "EQUAL",
+          totalCents: 900,
+        }),
+      }),
+      expenseParams(houseId, draftId),
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/confirm/i);
+    const after = await fetchExpense(draftId);
+    expect(after).toEqual(before);
+    expect(after).toMatchObject({ status: "DRAFT", merchant: "Costco", shares: [] });
+  });
+
+  test("DELETE discards a draft", async () => {
+    const draftId = await scanDraft("costco");
+    const res = await deleteExpense(
+      new Request(`http://localhost:3100/api/v1/households/${houseId}/expenses/${draftId}`, {
+        method: "DELETE",
+        headers: { cookie: ada.cookie },
+      }),
+      expenseParams(houseId, draftId),
+    );
+    expect(res.status).toBe(204);
+    expect(await prisma.expense.findUnique({ where: { id: draftId } })).toBeNull();
   });
 });

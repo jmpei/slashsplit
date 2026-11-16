@@ -1,7 +1,7 @@
 // Test login and auth URL on Vercel previews (#15): Vercel builds previews with NODE_ENV=production,
 // so the test login follows VERCEL_ENV when it is set, and previews fall back to their own URL.
-import { afterAll, describe, expect, test } from "vitest";
-import { prisma } from "@/lib/db";
+import { afterAll, afterEach, describe, expect, test, vi } from "vitest";
+import { prisma } from "@/server/db";
 import { authBaseURL, createAuth, testLoginEnabled } from "@/server/auth";
 
 const secret = "integration-test-secret-at-least-32-chars";
@@ -115,5 +115,37 @@ describe("rate limiting", () => {
     const auth = createAuth({ nodeEnv: "production", vercelEnv: "production", secret, baseURL });
     expect(auth.options.rateLimit?.enabled).toBe(true);
     expect(await signInBurst(auth, "203.0.113.11")).toContain(429);
+  });
+});
+
+// Vercel posts the branch alias (https://<project>-git-<branch>-<team>.vercel.app) on every PR, but
+// the auth base URL is the deployment's own VERCEL_URL, so the alias must be a trusted origin too.
+// Better Auth skips its origin check when NODE_ENV=test, so these ask its own isTrustedOrigin().
+describe("trusted origins on a Vercel preview", () => {
+  const branchHost = "slashsplit-git-fix-hardening-tomatoessucks-projects.vercel.app";
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  async function trusts(origin: string): Promise<boolean> {
+    const auth = createAuth({ nodeEnv: "production", vercelEnv: "preview", secret, baseURL });
+    return (await auth.$context).isTrustedOrigin(origin);
+  }
+
+  test("the VERCEL_BRANCH_URL alias is trusted when it is set", async () => {
+    vi.stubEnv("VERCEL_BRANCH_URL", branchHost);
+    expect(await trusts(`https://${branchHost}`)).toBe(true);
+    expect(await trusts(baseURL)).toBe(true);
+  });
+
+  test("without VERCEL_BRANCH_URL the alias stays untrusted", async () => {
+    vi.stubEnv("VERCEL_BRANCH_URL", "");
+    expect(await trusts(`https://${branchHost}`)).toBe(false);
+  });
+
+  test("another deployment's alias is never trusted", async () => {
+    vi.stubEnv("VERCEL_BRANCH_URL", branchHost);
+    expect(await trusts("https://slashsplit-git-other-tomatoessucks-projects.vercel.app")).toBe(false);
   });
 });

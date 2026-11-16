@@ -3,7 +3,7 @@
 // version counter moves on every create, edit, delete, confirm and settlement.
 import { createHmac } from "node:crypto";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { auth } from "@/server/auth";
 import { setRealtimePublisher, type RealtimeEvent } from "@/server/realtime";
 import { POST as createHousehold } from "@/app/api/v1/households/route";
@@ -217,6 +217,29 @@ describe("every balance-changing mutation publishes household-updated once", () 
   test("record settlement", async () => {
     await settle();
     expectOneHouseholdEvent();
+  });
+});
+
+describe("joining a household (#11)", () => {
+  test("a new member bumps the version and publishes household-updated once", async () => {
+    const cy = await signUp("Cy");
+    const { inviteCode } = (await prisma.household.findUniqueOrThrow({ where: { id: houseId } }));
+    const before = await currentVersion();
+    published.length = 0;
+    const res = await joinHousehold(request("/api/v1/households/join", cy, "POST", { inviteCode }));
+    expect(res.status).toBe(200);
+    expect(await currentVersion()).toBeGreaterThan(before);
+    expectOneHouseholdEvent();
+  });
+
+  test("joining again as a member changes nothing and publishes nothing", async () => {
+    const { inviteCode } = (await prisma.household.findUniqueOrThrow({ where: { id: houseId } }));
+    const before = await currentVersion();
+    published.length = 0;
+    const res = await joinHousehold(request("/api/v1/households/join", bo, "POST", { inviteCode }));
+    expect(res.status).toBe(200);
+    expect(await currentVersion()).toBe(before);
+    expect(published).toHaveLength(0);
   });
 });
 

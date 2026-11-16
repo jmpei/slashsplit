@@ -7,8 +7,8 @@ import { expenseBody, type ExpenseInput } from "@/lib/schemas/expenses";
 import { recordSettlementBody, type RecordSettlementInput } from "@/lib/schemas/settlements";
 import { auth } from "@/server/auth";
 import { recordSettlement } from "@/server/balances";
-import { createExpense, deleteExpense, ValidationError } from "@/server/expenses";
-import { isMember, NotFoundError } from "@/server/households";
+import { createExpense, ValidationError } from "@/server/expenses";
+import { isMember } from "@/server/households";
 
 export async function recordExpensePayloadAction(
   householdId: string,
@@ -31,18 +31,6 @@ export async function recordExpensePayloadAction(
   }
   revalidatePath(`/households/${householdId}`);
   return {};
-}
-
-export async function removeExpenseAction(householdId: string, expenseId: string): Promise<void> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in");
-  if (!(await isMember(session.user.id, householdId))) return;
-  try {
-    await deleteExpense(householdId, expenseId);
-  } catch (error) {
-    if (!(error instanceof NotFoundError)) throw error;
-  }
-  revalidatePath(`/households/${householdId}`);
 }
 
 export async function markTransferPaidAction(

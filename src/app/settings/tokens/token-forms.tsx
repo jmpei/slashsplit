@@ -3,7 +3,7 @@
 // confirmation first (#13). Escape cancels the confirmation; failures are announced in status regions.
 import { unstable_rethrow } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { buttonPrimary, buttonSecondary, errorText, field, label, NETWORK_ERROR } from "../../ui";
+import { buttonDanger, buttonPrimary, buttonSecondary, errorText, field, label, NETWORK_ERROR } from "../../ui";
 import { createTokenAction, revokeTokenAction, type CreateTokenState } from "./actions";
 
 const initial: CreateTokenState = { error: "" };
@@ -102,11 +102,9 @@ export function RevokeTokenButton({ id, name }: { id: string; name: string }) {
         >
           Revoke
         </button>
-        {error && (
-          <p role="status" aria-live="polite" className={errorText}>
-            {error}
-          </p>
-        )}
+        <p role="status" aria-live="polite" className="text-sm text-red-700 dark:text-red-400">
+          {error}
+        </p>
       </div>
     );
   }
@@ -116,7 +114,7 @@ export function RevokeTokenButton({ id, name }: { id: string; name: string }) {
       <button
         type="button"
         disabled={pending}
-        className="min-h-11 rounded-md border border-red-200 bg-red-50 px-4 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950"
+        className={buttonDanger}
         onClick={async () => {
           setPending(true);
           try {

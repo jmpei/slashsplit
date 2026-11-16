@@ -2,7 +2,7 @@
 // plaintext exists only in the create response.
 import { createHash, randomBytes } from "node:crypto";
 import { Prisma } from "@/generated/prisma/client";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 
 export type TokenSummary = { id: string; name: string; lastUsedAt: string | null; createdAt: string };
 export type CreatedToken = { id: string; name: string; token: string; createdAt: string };

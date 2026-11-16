@@ -1,4 +1,4 @@
-// The one Prisma client for the app. Only src/server/ imports this.
+// The one Prisma client for the app. Only src/server/ (and integration tests) import this.
 // The global cache stops Next.js dev hot reload from opening a new pool on every edit.
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";

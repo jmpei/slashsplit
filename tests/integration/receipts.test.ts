@@ -1,7 +1,7 @@
 // Receipt scan endpoint (#9) through the real route handler and Postgres. The extractor is the
 // fixture one (RECEIPT_EXTRACTOR=fixture:<name>), so no test calls Gemini.
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { auth } from "@/server/auth";
 import { POST as createHousehold } from "@/app/api/v1/households/route";
 import { POST as joinHousehold } from "@/app/api/v1/households/join/route";
@@ -171,6 +171,105 @@ describe("scanning a receipt into a draft expense", () => {
     const file = new File([new Uint8Array(MAX_BYTES + 1)], "huge.jpg", { type: "image/jpeg" });
     const res = await scanReceipt(multipartRequest(scanPath(), ada, file), params(houseId));
     expect(res.status).toBe(400);
+  });
+
+  test("rejects bytes that are not a jpg, png, webp or heic image whatever the declared type", async () => {
+    vi.stubEnv("RECEIPT_EXTRACTOR", "fixture:costco");
+    const before = await prisma.expense.count({ where: { householdId: houseId } });
+    const text = Buffer.from("just some text, not an image").toString("base64");
+    const json = await scanReceipt(
+      jsonRequest(scanPath(), ada, { mimeType: "image/jpeg", dataBase64: text }),
+      params(houseId),
+    );
+    expect(json.status).toBe(400);
+    const file = new File([new TextEncoder().encode("%PDF-1.7 fake")], "receipt.png", { type: "image/png" });
+    const multipart = await scanReceipt(multipartRequest(scanPath(), ada, file), params(houseId));
+    expect(multipart.status).toBe(400);
+    expect(await prisma.expense.count({ where: { householdId: houseId } })).toBe(before);
+  });
+
+  test.each([
+    ["webp", [0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x20]],
+    ["heic", [0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63, 0, 0, 0, 0]],
+  ])("accepts %s magic bytes", async (_name, bytes) => {
+    vi.stubEnv("RECEIPT_EXTRACTOR", "fixture:costco");
+    const dataBase64 = Buffer.from(bytes).toString("base64");
+    const res = await scanReceipt(
+      jsonRequest(scanPath(), ada, { mimeType: "image/jpeg", dataBase64 }),
+      params(houseId),
+    );
+    expect(res.status).toBe(201);
+  });
+
+  test("a body whose Content-Length is over the limit gets 413 without being read", async () => {
+    vi.stubEnv("RECEIPT_EXTRACTOR", "fixture:costco");
+    let pulls = 0;
+    // highWaterMark 0: the stream is pulled only when someone reads the body.
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          pulls++;
+          controller.enqueue(new Uint8Array(1024));
+          controller.close();
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const req = new Request(`http://localhost:3100${scanPath()}`, {
+      method: "POST",
+      headers: { cookie: ada.cookie, "content-type": "application/json", "content-length": String(20 * 1024 * 1024) },
+      body,
+      duplex: "half",
+    } as RequestInit);
+    const res = await scanReceipt(req, params(houseId));
+    expect(res.status).toBe(413);
+    expect(pulls).toBe(0);
+  });
+
+  test("a streamed JSON body without Content-Length is cut off once it passes the limit", async () => {
+    vi.stubEnv("RECEIPT_EXTRACTOR", "fixture:costco");
+    const chunk = new TextEncoder().encode("A".repeat(1024 * 1024));
+    const totalChunks = 40; // 40 MB if read to the end
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent === 0) controller.enqueue(new TextEncoder().encode('{"mimeType":"image/jpeg","dataBase64":"'));
+        if (sent++ < totalChunks) controller.enqueue(chunk);
+        else controller.close();
+      },
+    });
+    const req = new Request(`http://localhost:3100${scanPath()}`, {
+      method: "POST",
+      headers: { cookie: ada.cookie, "content-type": "application/json" },
+      body,
+      duplex: "half",
+    } as RequestInit);
+    const res = await scanReceipt(req, params(houseId));
+    expect(res.status).toBe(413);
+    expect(sent).toBeLessThan(totalChunks);
+  });
+
+  test("scanError never shows configuration details; the detail is logged instead", async () => {
+    vi.stubEnv("RECEIPT_EXTRACTOR", "");
+    vi.stubEnv("GEMINI_API_KEY", "");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await scanReceipt(jsonRequest(scanPath(), ada, smallJpeg), params(houseId));
+      expect(res.status).toBe(201);
+      const draft = await res.json();
+      expect(typeof draft.scanError).toBe("string");
+      expect(draft.scanError).not.toMatch(/GEMINI|API_KEY|not set|status \d/i);
+      expect(log.mock.calls.flat().map(String).join(" ")).toMatch(/GEMINI_API_KEY/);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  test("a malformed reply and a failed extractor store the same generic scanError", async () => {
+    const malformed = await (await scanWithFixture("malformed")).json();
+    const failed = await (await scanWithFixture("does-not-exist")).json();
+    expect(malformed.scanError).toBe(failed.scanError);
+    expect(malformed.scanError).not.toMatch(/items|ENOENT|fixture/i);
   });
 
   test("a non-member gets 403 and no draft is created", async () => {

@@ -1,7 +1,7 @@
 // Households and invite codes (#4) through the real route handlers and Postgres: create, join,
 // list members, and the membership check every /households/{id}/… route must make.
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/server/db";
 import { auth } from "@/server/auth";
 import { GET as listHouseholds, POST as createHousehold } from "@/app/api/v1/households/route";
 import { POST as joinHousehold } from "@/app/api/v1/households/join/route";

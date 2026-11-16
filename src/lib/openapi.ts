@@ -101,6 +101,13 @@ const eidParam = {
   description: "Expense id.",
 };
 
+// Token management (#13) takes the browser session only.
+const sessionOnly = { security: [{ cookieAuth: [] }] };
+const bearerForbidden = {
+  description: "Sent with a Bearer token: API tokens cannot manage tokens.",
+  content: { "application/json": { schema: jsonSchema(errorSchema) } },
+};
+
 const authErrors = {
   "401": {
     description: "Not signed in.",
@@ -127,6 +134,13 @@ export function buildOpenApiSpec() {
           type: "http",
           scheme: "bearer",
           description: "Personal API token sent in the Authorization header.",
+        },
+        cookieAuth: {
+          type: "apiKey",
+          in: "cookie",
+          name: "better-auth.session_token",
+          description:
+            "Browser session cookie set by signing in (prefixed `__Secure-` over HTTPS). Token management accepts only this.",
         },
       },
     },
@@ -173,16 +187,19 @@ export function buildOpenApiSpec() {
       "/api/v1/tokens": {
         get: {
           summary: "List the caller's personal API tokens (never the token itself)",
+          ...sessionOnly,
           responses: {
             "200": {
               description: "Tokens, newest first.",
               content: { "application/json": { schema: jsonSchema(z.array(tokenSummarySchema)) } },
             },
             "401": authErrors["401"],
+            "403": bearerForbidden,
           },
         },
         post: {
           summary: "Create a personal API token; the plaintext is returned once",
+          ...sessionOnly,
           requestBody: {
             required: true,
             content: {
@@ -192,7 +209,6 @@ export function buildOpenApiSpec() {
               },
             },
           },
-          "x-codeSamples": bearerCurl("POST", "/api/v1/tokens", { name: "Laptop script" }),
           responses: {
             "201": {
               description: "Created token, with its plaintext value shown only here.",
@@ -203,16 +219,19 @@ export function buildOpenApiSpec() {
               content: { "application/json": { schema: jsonSchema(errorSchema) } },
             },
             "401": authErrors["401"],
+            "403": bearerForbidden,
           },
         },
       },
       "/api/v1/tokens/{id}": {
         delete: {
           summary: "Revoke one of the caller's API tokens",
+          ...sessionOnly,
           parameters: [{ ...idParam, description: "Token id." }],
           responses: {
             "204": { description: "Token revoked." },
             "401": authErrors["401"],
+            "403": bearerForbidden,
             "404": {
               description: "The caller has no token with this id.",
               content: { "application/json": { schema: jsonSchema(errorSchema) } },
@@ -316,6 +335,8 @@ export function buildOpenApiSpec() {
         },
         patch: {
           summary: "Update an expense and recompute member shares",
+          description:
+            "Confirmed expenses only. A DRAFT answers 409 and is left unchanged: send its edits with POST /api/v1/households/{id}/expenses/{eid}/confirm.",
           parameters: [idParam, eidParam],
           requestBody: {
             required: true,
@@ -328,6 +349,10 @@ export function buildOpenApiSpec() {
             },
             "400": {
               description: "Validation failed.",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
+            },
+            "409": {
+              description: "The expense is a draft; edit it through its confirm request.",
               content: { "application/json": { schema: jsonSchema(errorSchema) } },
             },
             "404": {
@@ -385,7 +410,7 @@ export function buildOpenApiSpec() {
         post: {
           summary: "Scan a receipt image into a DRAFT itemized expense (the image is not stored)",
           description:
-            "Accepts a jpg, png, heic or webp image up to 10 MB. Gemini's reply becomes a DRAFT with every member ticked on every item; a reply that fails validation becomes an empty DRAFT with `scanError`. Drafts do not affect balances.",
+            "Accepts a jpg, png, heic or webp image up to 10 MB; the type is read from the image bytes, not the declared MIME type. Gemini's reply becomes a DRAFT with every member ticked on every item; a reply that fails validation becomes an empty DRAFT with a generic `scanError`. Drafts do not affect balances.",
           parameters: [idParam],
           requestBody: {
             required: true,
@@ -406,7 +431,11 @@ export function buildOpenApiSpec() {
               content: { "application/json": { schema: jsonSchema(expenseRecordSchema) } },
             },
             "400": {
-              description: "Missing file, unsupported image type, or larger than 10 MB.",
+              description: "Missing file, bytes that are not a jpg/png/heic/webp image, or an image larger than 10 MB.",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
+            },
+            "413": {
+              description: "Request body too large: refused before it is read (Content-Length) or as soon as it passes the limit.",
               content: { "application/json": { schema: jsonSchema(errorSchema) } },
             },
             ...authErrors,
@@ -430,12 +459,16 @@ export function buildOpenApiSpec() {
         get: {
           summary: "Get the household's change counter for real-time polling",
           description:
-            "Increases with every expense create, edit, delete or confirm and every recorded settlement. Clients without Pusher poll it every 2 seconds and refresh when it changes.",
+            "Increases with every expense create, edit, delete or confirm, every recorded settlement, and every new member. Clients without Pusher poll it every 2 seconds and refresh when it changes.",
           parameters: [idParam],
           responses: {
             "200": {
               description: "Current change counter.",
               content: { "application/json": { schema: jsonSchema(householdVersionSchema) } },
+            },
+            "404": {
+              description: "Household not found (deleted after the membership check).",
+              content: { "application/json": { schema: jsonSchema(errorSchema) } },
             },
             ...authErrors,
           },
