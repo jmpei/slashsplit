@@ -1,50 +1,84 @@
-# E2E on every PR: when Vercel finishes a preview deployment it sends a repository_dispatch event
-# (https://vercel.com/docs/git/vercel-for-github#repository-dispatch-events) with the deployment's
-# own URL and commit SHA. Playwright runs against that URL through Deployment Protection, and the
-# result is posted as the "E2E (preview)" commit status on the PR's head commit.
-# GitHub only starts repository_dispatch workflows from the default branch, and runs them with the
-# default branch's latest commit as GITHUB_SHA, so the steps below use the payload's SHA instead.
+# E2E on every PR: each push to a pull request waits for Vercel to finish that commit's preview
+# deployment (scripts/find-preview-url.mjs polls the Vercel API with VERCEL_TOKEN), then runs
+# Playwright against the deployment's own URL through Deployment Protection. The result is this
+# workflow's "E2E (preview)" job check on the PR.
+# A manual run tests the preview of the `sha` input, or of the selected branch's latest commit.
 name: E2E (preview)
 
 on:
-  repository_dispatch:
-    types: [vercel.deployment.success]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit SHA whose preview deployment to test (default the branch's latest commit)
+        required: false
 
 permissions:
   contents: read
-  statuses: write
 
 concurrency:
-  group: e2e-preview-${{ github.event.client_payload.git.ref }}
+  group: e2e-preview-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   e2e:
     name: E2E (preview)
-    if: github.event.client_payload.environment == 'preview'
+    # Dependabot-triggered runs get no Actions secrets, so the lookup and bypass cannot work.
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
-      GH_TOKEN: ${{ github.token }}
-      SHA: ${{ github.event.client_payload.git.sha }}
-      E2E_BASE_URL: ${{ github.event.client_payload.url }}
-      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha || inputs.sha || github.sha }}
     steps:
-      - name: Mark E2E (preview) pending
-        run: >
-          gh api "repos/${{ github.repository }}/statuses/$SHA"
-          -f state=pending -f context="E2E (preview)" -f target_url="$RUN_URL"
-          -f description="Playwright running against $E2E_BASE_URL"
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.client_payload.git.sha }}
+          ref: ${{ env.HEAD_SHA }}
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
+      - name: Wait for the Vercel preview deployment
+        id: preview
+        run: node scripts/find-preview-url.mjs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      # Fails fast when the preview does not answer through the bypass (wrong secret, or Vercel
+      # challenging the runner). Prints only status, final host and <title>: never headers, which
+      # carry the bypass cookie.
+      - name: Check the preview answers through the bypass
+        env:
+          E2E_BASE_URL: ${{ steps.preview.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          if [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            echo "::error::VERCEL_AUTOMATION_BYPASS_SECRET is empty in this run"
+            exit 1
+          fi
+          failed=0
+          for path in /sign-in /api/health; do
+            result=$(curl -sS -L -o body.html -w '%{http_code} %{url_effective}' \
+              -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" "$E2E_BASE_URL$path")
+            status=${result%% *}
+            host=$(echo "${result#* }" | sed -E 's#^https?://([^/?]+).*#\1#')
+            title=$(grep -o '<title>[^<]*</title>' body.html | head -1 | sed -E 's#</?title>##g')
+            echo "$path -> HTTP $status, final host $host, title: ${title:-(none)}"
+            if [ "$status" != "200" ] || [ "$host" != "${E2E_BASE_URL#https://}" ]; then failed=1; fi
+          done
+          rm -f body.html
+          if [ "$failed" = "1" ]; then
+            echo "::error::The preview did not return 200 on its own host through the bypass header. Check the VERCEL_AUTOMATION_BYPASS_SECRET Actions secret against Vercel Deployment Protection."
+            exit 1
+          fi
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test
+      # globalTimeout (12 min, playwright.config.ts) ends the run first; the step limit is a backstop
+      # so the report upload below always runs inside the job's 30 minutes.
+      - name: Run Playwright against the preview
+        run: npx playwright test
+        timeout-minutes: 14
         env:
+          E2E_BASE_URL: ${{ steps.preview.outputs.url }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       - uses: actions/upload-artifact@v7
         if: ${{ always() }}
@@ -52,10 +86,3 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
-      - name: Report E2E (preview) result
-        if: ${{ always() }}
-        run: >
-          gh api "repos/${{ github.repository }}/statuses/$SHA"
-          -f state=${{ job.status == 'success' && 'success' || 'failure' }}
-          -f context="E2E (preview)" -f target_url="$RUN_URL"
-          -f description="Playwright ${{ job.status }}"
