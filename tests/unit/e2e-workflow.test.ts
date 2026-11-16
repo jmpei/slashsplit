@@ -57,6 +57,11 @@ describe("e2e-preview.yml", () => {
       expect(workflow).toMatch(/if: \$\{\{ always\(\) \}\}|if: always\(\)/);
     });
 
+    test("skips Dependabot pull requests, which get no Actions secrets", () => {
+      const job = workflow.slice(workflow.indexOf("\n  e2e:"), workflow.indexOf("    steps:"));
+      expect(job).toMatch(/^ {4}if: \$\{\{ github\.actor != 'dependabot\[bot\]' \}\}\s*$/m);
+    });
+
     test("checks the preview answers through the bypass before Playwright runs", () => {
       const check = workflow.indexOf("name: Check the preview answers through the bypass");
       expect(check, "the check step exists").toBeGreaterThan(-1);
