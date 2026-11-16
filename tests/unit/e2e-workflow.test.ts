@@ -57,6 +57,29 @@ describe("e2e-preview.yml", () => {
       expect(workflow).toMatch(/if: \$\{\{ always\(\) \}\}|if: always\(\)/);
     });
 
+    test("checks the preview answers through the bypass before Playwright runs", () => {
+      const check = workflow.indexOf("name: Check the preview answers through the bypass");
+      expect(check, "the check step exists").toBeGreaterThan(-1);
+      expect(check).toBeGreaterThan(workflow.indexOf("node scripts/find-preview-url.mjs"));
+      expect(check).toBeLessThan(workflow.indexOf("npx playwright test"));
+      const step = workflow.slice(check, workflow.indexOf("- run: npm ci", check));
+      expect(step).toContain('x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET');
+      expect(step).toContain("/sign-in");
+      expect(step).toContain("/api/health");
+      expect(step).toMatch(/<title>/);
+      expect(step).toMatch(/exit 1/);
+      expect(step, "never dumps response headers or cookies").not.toMatch(/ -D | -i | -v |--include|--verbose/);
+    });
+
+    test("bounds the Playwright step so the report still uploads before the job timeout", () => {
+      const jobTimeout = Number(workflow.match(/^ {4}timeout-minutes: (\d+)/m)?.[1]);
+      const testStep = workflow.slice(workflow.indexOf("- name: Run Playwright against the preview"));
+      const stepTimeout = Number(testStep.match(/timeout-minutes: (\d+)/)?.[1]);
+      expect(stepTimeout).toBeGreaterThan(0);
+      // Preview lookup (10 min) + install and check (about 3) + tests must fit with room to upload.
+      expect(10 + 3 + stepTimeout).toBeLessThan(jobTimeout);
+    });
+
     test("reports through the job check, not the commit status API", () => {
       expect(workflow).not.toMatch(/statuses: write/);
       expect(workflow).not.toMatch(/repos\/[^\s]*\/statuses\//);
@@ -70,6 +93,12 @@ describe("playwright.config.ts", () => {
   test("sends the bypass header and asks Vercel to set the bypass cookie", () => {
     expect(config).toContain('"x-vercel-protection-bypass"');
     expect(config).toMatch(/"x-vercel-set-bypass-cookie":\s*"true"/);
+  });
+
+  test("retries once against a preview and caps the whole run", () => {
+    expect(config).toMatch(/retries: process\.env\.E2E_BASE_URL \? 1 : process\.env\.CI \? 2 : 0/);
+    expect(config).toMatch(/globalTimeout: process\.env\.E2E_BASE_URL \? 12 \* 60_000 : undefined/);
+    expect(config).toContain('trace: "on-first-retry"');
   });
 
   test("keeps the desktop and mobile projects", () => {
