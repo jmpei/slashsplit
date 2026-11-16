@@ -10,14 +10,17 @@ Rules for AI agents and contributors: [`AGENTS.md`](AGENTS.md).
 
 **Production:** https://slashsplit.vercel.app (Vercel + Neon Postgres; every merge to `main` deploys).
 
+**Demo video (8:21, subtitles burned in):** [release page](https://github.com/jmpei/slashsplit/releases/tag/demo-video) · [direct MP4](https://github.com/jmpei/slashsplit/releases/download/demo-video/slashsplit-demo.mp4)
+
 ## Features
 
-- Sign in with Google; outside production, a test email/password login for E2E.
+- Sign in with Google; outside production, a test email/password login for E2E. Sign out from the header of every signed-in page.
 - Households: create one, invite roommates with an 8-character code, see members in join order.
 - Expenses: record itemized bills (untick anyone who didn’t share an item), equal splits, or ratio splits, with proportional tax allocation and largest-remainder rounding.
-- Receipt scanning: upload a photo, Gemini turns it into a draft expense, and the draft can’t be confirmed while items plus taxes don’t match the total. Large photos are compressed in the browser first.
+- Receipt scanning: upload a photo, Gemini turns it into a draft expense, and the draft can’t be confirmed while items plus taxes don’t match the total. Large photos are compressed in the browser before upload, under Vercel’s 4.5 MB body limit. An unwanted draft can be discarded.
 - Balances and settlements: see every roommate’s net balance, get a greedy settlement plan in at most `n − 1` transfers, and mark transfers paid. Balances update for every roommate within seconds (Pusher, or polling without it).
-- Public API: personal Bearer tokens, OpenAPI 3.1 at `/api/openapi.json`, Swagger UI at `/api/docs`.
+- Public API: personal Bearer tokens (created and revoked only from the signed-in browser), OpenAPI 3.1 at `/api/openapi.json`, Swagger UI at `/api/docs`.
+- Preview E2E on every PR: each pull request’s Vercel preview runs the full Playwright suite on desktop and mobile.
 - `GET /api/health`: liveness check for deploys and E2E.
 
 ## Documentation
@@ -39,7 +42,7 @@ Rules for AI agents and contributors: [`AGENTS.md`](AGENTS.md).
 |---|---|
 | Multi-stage pipeline | [`.github/workflows/ci.yml`](.github/workflows/ci.yml): lint and typecheck → unit → integration (Postgres 17) → build |
 | Deploy previews | Vercel preview for every PR, each on its own Neon database branch |
-| Tests on every PR | [`ci.yml`](.github/workflows/ci.yml) on every PR and push to `main`; [`e2e-preview.yml`](.github/workflows/e2e-preview.yml) runs Playwright against each preview deployment |
+| Tests on every PR | [`ci.yml`](.github/workflows/ci.yml) on every PR and push to `main`; [`e2e-preview.yml`](.github/workflows/e2e-preview.yml) runs Playwright against each PR’s own preview deployment (Dependabot PRs skipped: they get no Actions secrets) |
 | Security scanning | CodeQL ([`codeql.yml`](.github/workflows/codeql.yml)), gitleaks and `npm audit` (jobs in `ci.yml`), Dependabot ([`.github/dependabot.yml`](.github/dependabot.yml)) |
 | Automated deployment | Vercel deploys `main` to production; [`scripts/vercel-build.mjs`](scripts/vercel-build.mjs) applies migrations before `next build` |
 | Environment management | [`docs/setup.md`](docs/setup.md): local, CI, preview and production |
