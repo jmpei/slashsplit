@@ -9,14 +9,15 @@ const PROJECT_ID = "prj_9McdRm0FasqxQoZLRddb76uucZYf";
 const TEAM_ID = "team_c4rmF3YoM5Pt4AbcDawJeehg";
 const FAILED_STATES = ["ERROR", "CANCELED"];
 
-// { status: "ready", url } when a deployment of `sha` is READY, { status: "failed", state } when
-// every deployment of `sha` failed, otherwise null (none yet, or still building).
+// { status: "ready", url } when a deployment of `sha` is READY, { status: "failed", state } with the
+// newest one's state when every deployment of `sha` failed (the API lists newest first), otherwise
+// null (none yet, or still building).
 export function pickPreviewDeployment(deployments, sha) {
   const ofCommit = deployments.filter((d) => d.meta?.githubCommitSha === sha);
   const ready = ofCommit.find((d) => d.readyState === "READY");
   if (ready) return { status: "ready", url: `https://${ready.url}` };
   if (ofCommit.length > 0 && ofCommit.every((d) => FAILED_STATES.includes(d.readyState))) {
-    return { status: "failed", state: ofCommit.at(-1).readyState };
+    return { status: "failed", state: ofCommit[0].readyState };
   }
   return null;
 }
@@ -34,6 +35,8 @@ export async function findPreviewUrl({
   url.searchParams.set("projectId", PROJECT_ID);
   url.searchParams.set("teamId", TEAM_ID);
   url.searchParams.set("target", "preview");
+  // The default page is 20 deployments; 100 keeps this commit's on the first page on a busy day.
+  url.searchParams.set("limit", "100");
 
   const start = now();
   while (now() - start < timeoutMs) {
