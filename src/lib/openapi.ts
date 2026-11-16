@@ -101,6 +101,13 @@ const eidParam = {
   description: "Expense id.",
 };
 
+// Token management (#13) takes the browser session only.
+const sessionOnly = { security: [{ cookieAuth: [] }] };
+const bearerForbidden = {
+  description: "Sent with a Bearer token: API tokens cannot manage tokens.",
+  content: { "application/json": { schema: jsonSchema(errorSchema) } },
+};
+
 const authErrors = {
   "401": {
     description: "Not signed in.",
@@ -127,6 +134,13 @@ export function buildOpenApiSpec() {
           type: "http",
           scheme: "bearer",
           description: "Personal API token sent in the Authorization header.",
+        },
+        cookieAuth: {
+          type: "apiKey",
+          in: "cookie",
+          name: "better-auth.session_token",
+          description:
+            "Browser session cookie set by signing in (prefixed `__Secure-` over HTTPS). Token management accepts only this.",
         },
       },
     },
@@ -173,16 +187,19 @@ export function buildOpenApiSpec() {
       "/api/v1/tokens": {
         get: {
           summary: "List the caller's personal API tokens (never the token itself)",
+          ...sessionOnly,
           responses: {
             "200": {
               description: "Tokens, newest first.",
               content: { "application/json": { schema: jsonSchema(z.array(tokenSummarySchema)) } },
             },
             "401": authErrors["401"],
+            "403": bearerForbidden,
           },
         },
         post: {
           summary: "Create a personal API token; the plaintext is returned once",
+          ...sessionOnly,
           requestBody: {
             required: true,
             content: {
@@ -192,7 +209,6 @@ export function buildOpenApiSpec() {
               },
             },
           },
-          "x-codeSamples": bearerCurl("POST", "/api/v1/tokens", { name: "Laptop script" }),
           responses: {
             "201": {
               description: "Created token, with its plaintext value shown only here.",
@@ -203,16 +219,19 @@ export function buildOpenApiSpec() {
               content: { "application/json": { schema: jsonSchema(errorSchema) } },
             },
             "401": authErrors["401"],
+            "403": bearerForbidden,
           },
         },
       },
       "/api/v1/tokens/{id}": {
         delete: {
           summary: "Revoke one of the caller's API tokens",
+          ...sessionOnly,
           parameters: [{ ...idParam, description: "Token id." }],
           responses: {
             "204": { description: "Token revoked." },
             "401": authErrors["401"],
+            "403": bearerForbidden,
             "404": {
               description: "The caller has no token with this id.",
               content: { "application/json": { schema: jsonSchema(errorSchema) } },

@@ -1,13 +1,14 @@
-// DELETE: revoke one of the caller's API tokens (#13). Someone else's token answers 404.
-import { currentUserId, notFound, unauthorized } from "@/server/api";
+// DELETE: revoke one of the caller's API tokens (#13), with the browser session only. Someone else's
+// token answers 404.
+import { notFound, requireSession } from "@/server/api";
 import { revokeToken } from "@/server/tokens";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   const { id } = await params;
-  const userId = await currentUserId(request);
-  if (!userId) return unauthorized();
-  if (!(await revokeToken(userId, id))) return notFound("No token with that id.");
+  const caller = await requireSession(request);
+  if (caller instanceof Response) return caller;
+  if (!(await revokeToken(caller.userId, id))) return notFound("No token with that id.");
   return new Response(null, { status: 204 });
 }

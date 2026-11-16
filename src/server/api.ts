@@ -13,14 +13,35 @@ export const notFound = (message: string) => Response.json({ error: message }, {
 export const badRequest = (message: string) => Response.json({ error: message }, { status: 400 });
 export const conflict = (message: string) => Response.json({ error: message }, { status: 409 });
 
-// A Bearer API token (#13) takes precedence over the session cookie; an unknown token is a 401.
-export async function currentUserId(request: Request): Promise<string | null> {
-  const authorization = request.headers.get("authorization");
-  if (authorization?.startsWith("Bearer ")) {
-    return userIdForToken(authorization.slice("Bearer ".length).trim());
-  }
+// The token in an `Authorization: Bearer <token>` header, or null. The scheme name is
+// case-insensitive (RFC 7235).
+function bearerToken(request: Request): string | null {
+  const match = /^bearer\s+(.+)$/i.exec(request.headers.get("authorization") ?? "");
+  return match ? match[1].trim() : null;
+}
+
+async function sessionUserId(request: Request): Promise<string | null> {
   const session = await auth.api.getSession({ headers: request.headers });
   return session?.user.id ?? null;
+}
+
+// A Bearer API token (#13) takes precedence over the session cookie; an unknown token is a 401.
+export async function currentUserId(request: Request): Promise<string | null> {
+  const token = bearerToken(request);
+  return token !== null ? userIdForToken(token) : sessionUserId(request);
+}
+
+// Token management (#13) takes the browser session only, so a leaked token cannot mint a fresh one
+// that outlives revoking it. Returns the caller's user id, or the 401/403 response to send instead.
+export async function requireSession(request: Request): Promise<{ userId: string } | Response> {
+  if (bearerToken(request) !== null) {
+    return Response.json(
+      { error: "API tokens can’t manage tokens. Use the browser session at /settings/tokens." },
+      { status: 403 },
+    );
+  }
+  const userId = await sessionUserId(request);
+  return userId ? { userId } : unauthorized();
 }
 
 // Returns the caller's user id, or the 401/403 response to send instead.

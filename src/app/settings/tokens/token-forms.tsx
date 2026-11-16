@@ -102,11 +102,9 @@ export function RevokeTokenButton({ id, name }: { id: string; name: string }) {
         >
           Revoke
         </button>
-        {error && (
-          <p role="status" aria-live="polite" className={errorText}>
-            {error}
-          </p>
-        )}
+        <p role="status" aria-live="polite" className="text-sm text-red-700 dark:text-red-400">
+          {error}
+        </p>
       </div>
     );
   }
