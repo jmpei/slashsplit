@@ -17,9 +17,9 @@ The sprint ran past its Nov 10–12 window into Nov 15. Nov 15 counts as an exte
 
 - All of the sprint's work landed on one day, after the planned window.
 - Previews had no environment variables at first, so the evaluations for #33–#37 ran locally.
-- The `E2E (preview)` workflow starts only from `main`, so it could not run on its own PR (#39), and it had not yet run on a PR when the sprint closed.
-- Some evaluator findings were recorded but not fixed before merge, for example a Bearer token can create new tokens (`33-r1`, medium).
-- Four Dependabot PRs (#28–#31) are still open.
+- The `E2E (preview)` workflow starts only from `main`, so it could not run on its own PR (#39), and it had not yet run on a PR when the sprint closed. Later: since #42 it runs on every PR, and its first run passed on #42's own preview (58 passed, 4 skipped).
+- Some evaluator findings were recorded but not fixed before merge, for example a Bearer token can create new tokens (`33-r1`, medium). Later: fixed in #45.
+- Four Dependabot PRs (#28–#31) were still open. Later: all four were closed.
 
 ## What I would change
 
