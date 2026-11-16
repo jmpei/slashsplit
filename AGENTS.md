@@ -37,6 +37,7 @@ npm run test:e2e                                 # Playwright E2E suite (port 31
 9. **Previews use their own Neon branch:** Every PR preview runs on its own Neon database branch; `scripts/vercel-build.mjs` migrates a preview only when none of its database URLs points at the production host.
 10. **Accessibility:** Every action is reachable with Tab and Enter, every focused control shows the visible focus ring (never `outline-none`), every input has a label, status and error messages live in `role="status"`, and text contrast is at least 4.5:1 in light and dark (`e2e/ui-polish.spec.ts`).
 11. **No new npm dependencies without a stated reason:** A PR that adds a package names in its body what it does that existing code or the platform cannot.
+12. **Partner review on every PR:** The partner who did not write a PR reviews it. The review names the files and functions read, checks the Red → Green commit split, and checks money stays integer cents and member routes answer `401`/`403`. A review written after the merge says so in its first line.
 </invariants>
 
 <scoped_rules>
@@ -54,6 +55,7 @@ Load these files when working in their respective areas:
 
 ## Changelog
 
+- **v3 — 2026-11-12** (Marcus Ramos) — Added rule 12: partner review on every PR, with post-merge reviews labeled as such. Sprint 2 review notes: confirmed Bearer token hash-only storage (`ss_` prefix + SHA-256), Gemini fixture injection pattern (`RECEIPT_EXTRACTOR=fixture:<name>`), real-time 2 s polling fallback when Pusher env vars absent.
 - **2026-11-15** — Sprint 2 rules: receipt tests use fixtures and never call Gemini; API tokens stored as SHA-256 hashes; real-time falls back to polling and only members may subscribe; previews run on their own Neon branch. Added the accessibility rule and the no-new-dependencies rule.
 
 <!-- BEGIN:nextjs-agent-rules -->
