@@ -24,6 +24,8 @@ concurrency:
 jobs:
   e2e:
     name: E2E (preview)
+    # Dependabot-triggered runs get no Actions secrets, so the lookup and bypass cannot work.
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
